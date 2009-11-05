@@ -23,7 +23,7 @@ for dirpath, dirnames, filenames in os.walk('multisite'):
             data_files.append(os.path.join(prefix, f))
 
 
-setup(name='multisite',
+setup(name='django-multisite',
       version='0.1',
       description='Multisite for Django',
       author='Leonid S Shestera',
