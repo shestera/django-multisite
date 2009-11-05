@@ -1,4 +1,4 @@
-# -*- mode: python; coding: utf-8; -*-
+# -*- coding: utf-8 -*
 
 try:
     from threading import local
