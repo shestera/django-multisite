@@ -5,7 +5,7 @@ from django.contrib.sites.models import Site
 from django.conf import settings
 
 def get_template_sources(template_name, template_dirs=None):
-    template_dir = os.path.join(os.path.normpath(os.path.dirname(__file__)), '..', 'templates', Site.objects.get_current().domain)
+    template_dir = os.path.join(settings.TEMPLATE_DIRS[0], Site.objects.get_current().domain)
     try:
         yield safe_join(template_dir, template_name)
     except UnicodeDecodeError:
