@@ -47,6 +47,21 @@ class MultisiteModelAdmin(admin.ModelAdmin):
         Also prevents users from assigning objects to sites that they are not
         members of.
 
+        If the foreign key does not have a site/sites field directly, you can
+        specify a path to a site/sites field to filter on by setting the key:
+
+            - multisite_foreign_key_site_path
+
+        to a dictionary pointing specific foreign key field instances from their
+        model to the site field to filter on something like:
+
+            multisite_indirect_foreign_key_path = {
+                    'plan_instance': 'plan__site'
+                }
+
+        for a field named 'plan_instance' referencing a model with a foreign key
+        named 'plan' having a foreign key to 'site'.
+
         (As long as you're not a superuser)
         """
         if(not request.user.is_superuser):
@@ -61,6 +76,14 @@ class MultisiteModelAdmin(admin.ModelAdmin):
                         )
             if db_field.name == "site" or db_field.name == "sites":
                 kwargs["queryset"] = user_sites
+            if(hasattr(self, "multisite_indirect_foreign_key_path")):
+                if db_field.name in self.multisite_indirect_foreign_key_path.keys():
+                    qkwargs = {
+                                self.multisite_indirect_foreign_key_path[db_field.name]: user_sites
+                            }
+                    kwargs["queryset"] = db_field.rel.to.objects.filter(
+                                **qkwargs
+                            )
         return kwargs
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
