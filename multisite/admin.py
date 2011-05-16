@@ -67,11 +67,11 @@ class MultisiteModelAdmin(admin.ModelAdmin):
         if(not request.user.is_superuser):
             user_sites = request.user.get_profile().sites.all()
             if(hasattr(db_field.rel.to, "site")):
-                kwargs["queryset"] = db_field.rel.to.objects.filter(
+                kwargs["queryset"] = db_field.rel.to._default_manager.filter(
                             site__in = user_sites
                         )
             if(hasattr(db_field.rel.to, "sites")):
-                kwargs["queryset"] = db_field.rel.to.objects.filter(
+                kwargs["queryset"] = db_field.rel.to._default_manager.filter(
                             sites__in = user_sites
                         )
             if db_field.name == "site" or db_field.name == "sites":
@@ -81,7 +81,7 @@ class MultisiteModelAdmin(admin.ModelAdmin):
                     qkwargs = {
                                 self.multisite_indirect_foreign_key_path[db_field.name]: user_sites
                             }
-                    kwargs["queryset"] = db_field.rel.to.objects.filter(
+                    kwargs["queryset"] = db_field.rel.to._default_manager.filter(
                                 **qkwargs
                             )
         return kwargs
