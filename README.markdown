@@ -3,7 +3,7 @@ README
 
 Get the code via svn:
 
-    git clone git://github.com/shestera/django-multisite.git django-multisite
+    git clone git://github.com/plazix/django-multisite.git django-multisite
 
 Add the django-multisite/multisite folder to your PYTHONPATH.
 
@@ -15,8 +15,8 @@ Replace your SITE_ID in settings.py to:
 Add to settings.py TEMPLATE_LOADERS: 
 
     TEMPLATE_LOADERS = ( 
-        'multisite.template_loader.load_template_source',
-        'django.template.loaders.app_directories.load_template_source', 
+        'multisite.template_loader.Loader',
+        'django.template.loaders.app_directories.Loader',
     ) 
 
 Edit to settings.py MIDDLEWARE_CLASSES:
