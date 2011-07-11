@@ -1,4 +1,43 @@
 from django.contrib import admin
+from django.contrib.admin.views.main import ChangeList
+from django.contrib.sites.models import Site
+
+
+class MultisiteChangeList(ChangeList):
+    """
+    A ChangeList like the built-in admin one, but it excludes site filters for
+    sites you're not associated with, unless you're a super-user.
+
+    At this point, it's probably fragile, given its reliance on Django internals.
+    """
+    def get_filters(self, request, *args, **kwargs):
+        """
+        This might be considered a fragile function, since it relies on a fair bit
+        of Django's internals.
+        """
+        filter_specs, has_filter_specs = super(MultisiteChangeList, self).get_filters(request, *args, **kwargs)
+        if request.user.is_superuser or not has_filter_specs:
+            return filter_specs, has_filter_specs
+        new_filter_specs = []
+        user_sites = frozenset(request.user.get_profile().sites.values_list("pk", "domain"))
+        for filter_spec in filter_specs:
+            try:
+                rel_to = filter_spec.field.rel.to
+            except AttributeError:
+                new_filter_specs.append(filter_spec)
+                continue
+            if rel_to is not Site:
+                new_filter_specs.append(filter_spec)
+                continue
+            lookup_choices = frozenset(filter_spec.lookup_choices) & user_sites
+            if len(lookup_choices) > 1:
+                # put the choices back into the form they came in
+                filter_spec.lookup_choices = list(lookup_choices)
+                filter_spec.lookup_choices.sort()
+                new_filter_specs.append(filter_spec)
+
+        return new_filter_specs, bool(new_filter_specs)
+
 
 
 class MultisiteModelAdmin(admin.ModelAdmin):
@@ -91,3 +130,11 @@ class MultisiteModelAdmin(admin.ModelAdmin):
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         kwargs = self.handle_multisite_foreign_keys(db_field, request, **kwargs)
         return super(MultisiteModelAdmin, self).formfield_for_manytomany(db_field, request, **kwargs)
+
+    def get_changelist(self, request, **kwargs):
+        """
+        Restrict the site filter (if there is one) to sites you are associated with,
+        or remove it entirely if you're just associated with one site. Unless you're a
+        super-user, of course.
+        """
+        return MultisiteChangeList
