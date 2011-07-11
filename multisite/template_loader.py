@@ -12,7 +12,7 @@ class Loader(FilesystemLoader):
             template_dirs = settings.TEMPLATE_DIRS
 
         domain = Site.objects.get_current().domain
-        default_dir = getattr(settings, 'MULTISITE_DEFAULT_DIR', 'default')
+        default_dir = getattr(settings, 'MULTISITE_DEFAULT_TEMPLATE_DIR', 'default')
 
         new_template_dirs = []
         for template_dir in template_dirs:

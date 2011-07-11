@@ -5,10 +5,13 @@ try:
 except ImportError:
     from django.utils._threading_local import local
 
+
 _thread_locals = local()
+
 
 def get_request():
     return getattr(_thread_locals, 'request', None)
+
 
 class ThreadLocalsMiddleware(object):
     """Middleware that saves request in thread local starage"""

@@ -1,5 +1,6 @@
 from django.contrib import admin
 
+
 class MultisiteModelAdmin(admin.ModelAdmin):
     """
     A very helpful modeladmin class for handling multi-site django applications.
@@ -20,23 +21,22 @@ class MultisiteModelAdmin(admin.ModelAdmin):
         (As long as you're not a superuser)
         """
         qs = super(MultisiteModelAdmin, self).queryset(request)
-        if(request.user.is_superuser):
+        if request.user.is_superuser:
             return qs
+
         user_sites = request.user.get_profile().sites.all()
-        if(hasattr(qs.model, "site")):
-            qs = qs.filter(
-                    site__in = user_sites
-                )
-        elif(hasattr(qs.model, "sites")):
-            qs = qs.filter(
-                    sites__in = user_sites
-                )
-        if(hasattr(self, "multisite_filter_fields")):
+        if hasattr(qs.model, "site"):
+            qs = qs.filter(site__in = user_sites)
+        elif hasattr(qs.model, "sites"):
+            qs = qs.filter(sites__in = user_sites)
+
+        if hasattr(self, "multisite_filter_fields"):
             for field in self.multisite_filter_fields:
                 qkwargs = {
-                        "{field}__in".format(field = field): user_sites
-                        }
+                    "{field}__in".format(field = field): user_sites
+                }
                 qs = qs.filter(**qkwargs)
+
         return qs
 
     def handle_multisite_foreign_keys(self, db_field, request, **kwargs):
@@ -64,26 +64,24 @@ class MultisiteModelAdmin(admin.ModelAdmin):
 
         (As long as you're not a superuser)
         """
-        if(not request.user.is_superuser):
+        if not request.user.is_superuser:
             user_sites = request.user.get_profile().sites.all()
-            if(hasattr(db_field.rel.to, "site")):
+            if hasattr(db_field.rel.to, "site"):
                 kwargs["queryset"] = db_field.rel.to._default_manager.filter(
-                            site__in = user_sites
-                        )
-            if(hasattr(db_field.rel.to, "sites")):
+                    site__in = user_sites
+                )
+            if hasattr(db_field.rel.to, "sites"):
                 kwargs["queryset"] = db_field.rel.to._default_manager.filter(
-                            sites__in = user_sites
-                        )
+                    sites__in = user_sites
+                )
             if db_field.name == "site" or db_field.name == "sites":
                 kwargs["queryset"] = user_sites
-            if(hasattr(self, "multisite_indirect_foreign_key_path")):
+            if hasattr(self, "multisite_indirect_foreign_key_path"):
                 if db_field.name in self.multisite_indirect_foreign_key_path.keys():
                     qkwargs = {
-                                self.multisite_indirect_foreign_key_path[db_field.name]: user_sites
-                            }
-                    kwargs["queryset"] = db_field.rel.to._default_manager.filter(
-                                **qkwargs
-                            )
+                        self.multisite_indirect_foreign_key_path[db_field.name]: user_sites
+                    }
+                    kwargs["queryset"] = db_field.rel.to._default_manager.filter(**qkwargs)
         return kwargs
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):

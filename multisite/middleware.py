@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
+
 from django.conf import settings
 from django.contrib.sites.models import Site
 
+
 HOST_CACHE = {}
+
 
 class DynamicSiteMiddleware(object):
     def process_request(self, request):

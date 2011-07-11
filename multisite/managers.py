@@ -1,6 +1,7 @@
 from django.contrib.sites.managers import CurrentSiteManager
 from django.contrib.sites.models import Site
 
+
 class PathAssistedCurrentSiteManager(CurrentSiteManager):
     def __init__(self, field_path):
         super(PathAssistedCurrentSiteManager, self).__init__()
