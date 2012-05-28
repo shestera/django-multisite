@@ -27,6 +27,27 @@ class RequestFactory(DjangoRequestFactory):
 
 @skipUnless(Site._meta.installed,
             'django.contrib.sites is not in settings.INSTALLED_APPS')
+@override_settings(SITE_ID=SiteIDHook(), DEBUG=True)
+class TestContribSite(TestCase):
+    def setUp(self):
+        self.host = 'example.com'
+        self.site = Site.objects.create(domain=self.host)
+        settings.SITE_ID.set(self.site.id)
+
+    def tearDown(self):
+        try:
+            del _thread_locals.SITE_ID
+        except AttributeError:
+            pass
+
+    def test_get_current_site(self):
+        current_site = Site.objects.get_current()
+        self.assertEqual(current_site, self.site)
+        self.assertEqual(current_site.id, settings.SITE_ID)
+
+
+@skipUnless(Site._meta.installed,
+            'django.contrib.sites is not in settings.INSTALLED_APPS')
 @override_settings(SITE_ID=SiteIDHook())
 class DynamicSiteMiddlewareTest(TestCase):
     def setUp(self):
