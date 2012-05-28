@@ -19,16 +19,17 @@ class ThreadLocalsMiddleware(object):
         _thread_locals.request = request
 
 
-class SiteIDHook(object):
+class SiteIDHook(local):
+    def __init__(self):
+        self.reset()
+
     def __repr__(self):
         return str(self.__int__())
 
     def __int__(self):
-        try:
-            return _thread_locals.SITE_ID
-        except AttributeError:
-            _thread_locals.SITE_ID = 1
-            return _thread_locals.SITE_ID
+        if self.site_id is None:
+            return 1
+        return self.site_id
 
     def __lt__(self, other):
         if isinstance(other, (int, long)):
@@ -67,4 +68,7 @@ class SiteIDHook(object):
         from django.db.models import Model
         if isinstance(value, Model):
             value = value.pk
-        _thread_locals.SITE_ID = value
+        self.site_id = value
+
+    def reset(self):
+        self.site_id = None

@@ -34,12 +34,6 @@ class TestContribSite(TestCase):
         self.site = Site.objects.create(domain=self.host)
         settings.SITE_ID.set(self.site.id)
 
-    def tearDown(self):
-        try:
-            del _thread_locals.SITE_ID
-        except AttributeError:
-            pass
-
     def test_get_current_site(self):
         current_site = Site.objects.get_current()
         self.assertEqual(current_site, self.site)
@@ -62,10 +56,7 @@ class DynamicSiteMiddlewareTest(TestCase):
 
     def tearDown(self):
         HOST_CACHE.clear()
-        try:
-            del _thread_locals.SITE_ID
-        except AttributeError:
-            pass
+        settings.SITE_ID.reset()
 
     def test_valid_domain(self):
         # Make the request
@@ -124,17 +115,8 @@ class TestSiteIDHook(TestCase):
         Site.objects.all().delete()
         self.site = Site.objects.create(domain=self.host)
 
-        self.reset_site_id()
         self.site_id = SiteIDHook()
-
-    def tearDown(self):
-        self.reset_site_id()
-
-    def reset_site_id(self):
-        try:
-            del _thread_locals.SITE_ID
-        except AttributeError:
-            pass
+        self.site_id.reset()
 
     def test_compare_default_site_id(self):
         # Default SITE_ID is 1
