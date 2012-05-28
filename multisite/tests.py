@@ -1,3 +1,5 @@
+import warnings
+
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.test import TestCase
@@ -9,8 +11,9 @@ try:
 except ImportError:
     from override_settings import override_settings
 
-from multisite.middleware import DynamicSiteMiddleware, HOST_CACHE
-from multisite.threadlocals import SiteIDHook, _thread_locals
+from . import SiteID, threadlocals
+from .middleware import DynamicSiteMiddleware, HOST_CACHE
+from .threadlocals import SiteIDHook
 
 
 class RequestFactory(DjangoRequestFactory):
@@ -27,11 +30,10 @@ class RequestFactory(DjangoRequestFactory):
 
 @skipUnless(Site._meta.installed,
             'django.contrib.sites is not in settings.INSTALLED_APPS')
-@override_settings(SITE_ID=SiteIDHook(), DEBUG=True)
+@override_settings(SITE_ID=SiteID())
 class TestContribSite(TestCase):
     def setUp(self):
-        self.host = 'example.com'
-        self.site = Site.objects.create(domain=self.host)
+        self.site = Site.objects.create(domain='example.com')
         settings.SITE_ID.set(self.site.id)
 
     def test_get_current_site(self):
@@ -42,7 +44,7 @@ class TestContribSite(TestCase):
 
 @skipUnless(Site._meta.installed,
             'django.contrib.sites is not in settings.INSTALLED_APPS')
-@override_settings(SITE_ID=SiteIDHook())
+@override_settings(SITE_ID=SiteID(default=1))
 class DynamicSiteMiddlewareTest(TestCase):
     def setUp(self):
         self.host = 'example.com'
@@ -108,24 +110,23 @@ class DynamicSiteMiddlewareTest(TestCase):
         self.assertEqual(settings.SITE_ID, 1)
 
 
-class TestSiteIDHook(TestCase):
+class TestSiteID(TestCase):
     def setUp(self):
-        self.host = 'example.com'
+        self.site = Site.objects.create(domain='example.com')
+        self.site_id = SiteID()
 
-        Site.objects.all().delete()
-        self.site = Site.objects.create(domain=self.host)
-
-        self.site_id = SiteIDHook()
-        self.site_id.reset()
+    def test_invalid_default(self):
+        self.assertRaises(ValueError, SiteID, default='a')
+        self.assertRaises(ValueError, SiteID, default=self.site_id)
 
     def test_compare_default_site_id(self):
-        # Default SITE_ID is 1
-        self.assertEqual(self.site_id, 1)
-        self.assertFalse(self.site_id != 1)
-        self.assertFalse(self.site_id < 1)
-        self.assertTrue(self.site_id <= 1)
-        self.assertFalse(self.site_id > 1)
-        self.assertTrue(self.site_id >= 1)
+        self.site_id = SiteID(default=self.site.id)
+        self.assertEqual(self.site_id, self.site.id)
+        self.assertFalse(self.site_id != self.site.id)
+        self.assertFalse(self.site_id < self.site.id)
+        self.assertTrue(self.site_id <= self.site.id)
+        self.assertFalse(self.site_id > self.site.id)
+        self.assertTrue(self.site_id >= self.site.id)
 
     def test_compare_site_ids(self):
         self.site_id.set(1)
@@ -166,3 +167,20 @@ class TestSiteIDHook(TestCase):
         self.assertEqual(hash(self.site_id), 10)
         self.site_id.set(20)
         self.assertEqual(hash(self.site_id), 20)
+
+
+class TestSiteIDHook(TestCase):
+    def test_deprecation_warning(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            threadlocals.__warningregistry__ = {}
+            SiteIDHook()
+            self.assertTrue(w)
+            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
+
+    def test_default_value(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            site_id = SiteIDHook()
+            self.assertEqual(site_id.default, 1)
+            self.assertEqual(int(site_id), 1)

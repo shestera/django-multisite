@@ -9,8 +9,8 @@ Add the django-multisite/multisite folder to your PYTHONPATH.
 
 Replace your SITE_ID in settings.py to:
 
-    from multisite.threadlocals import SiteIDHook
-    SITE_ID = SiteIDHook()
+    from multisite import SiteID
+    SITE_ID = SiteID()
 
 Add to settings.py TEMPLATE_LOADERS: 
 
