@@ -176,6 +176,8 @@ class TestSiteIDHook(TestCase):
         self.assertEqual(int(self.site_id), 10)
         self.site_id.set(20)
         self.assertEqual(int(self.site_id), 20)
+        self.site_id.set(self.site)
+        self.assertEqual(int(self.site_id), self.site.id)
 
     def test_hash(self):
         self.site_id.set(10)

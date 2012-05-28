@@ -64,4 +64,7 @@ class SiteIDHook(object):
         return self.__int__()
 
     def set(self, value):
+        from django.db.models import Model
+        if isinstance(value, Model):
+            value = value.pk
         _thread_locals.SITE_ID = value
