@@ -94,3 +94,44 @@ class DynamicSiteMiddlewareTest(TestCase):
         request = self.factory.get('/')
         self.assertEqual(self.middleware.process_request(request), None)
         self.assertEqual(settings.SITE_ID, 1)
+
+
+class TestSiteIDHook(TestCase):
+    def setUp(self):
+        self.host = 'example.com'
+
+        Site.objects.all().delete()
+        self.site = Site.objects.create(domain=self.host)
+
+        self.reset_site_id()
+        self.site_id = SiteIDHook()
+
+    def tearDown(self):
+        self.reset_site_id()
+
+    def reset_site_id(self):
+        try:
+            del _thread_locals.SITE_ID
+        except AttributeError:
+            pass
+
+    def test_compare_default_site_id(self):
+        # Default SITE_ID is 1
+        self.assertEqual(self.site_id, 1)
+        self.assertFalse(self.site_id != 1)
+        self.assertFalse(self.site_id < 1)
+        self.assertTrue(self.site_id <= 1)
+        self.assertFalse(self.site_id > 1)
+        self.assertTrue(self.site_id >= 1)
+
+    def test_set(self):
+        self.site_id.set(10)
+        self.assertEqual(int(self.site_id), 10)
+        self.site_id.set(20)
+        self.assertEqual(int(self.site_id), 20)
+
+    def test_hash(self):
+        self.site_id.set(10)
+        self.assertEqual(hash(self.site_id), 10)
+        self.site_id.set(20)
+        self.assertEqual(hash(self.site_id), 20)
