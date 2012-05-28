@@ -33,17 +33,23 @@ class SiteIDHook(object):
     def __lt__(self, other):
         if isinstance(other, (int, long)):
             return self.__int__() < other
-        return super(SiteIDHook, self).__lt__(other)
+        elif isinstance(other, SiteIDHook):
+            return self.__int__() < other.__int__()
+        return True
 
     def __le__(self, other):
         if isinstance(other, (int, long)):
             return self.__int__() <= other
-        return super(SiteIDHook, self).__le__(other)
+        elif isinstance(other, SiteIDHook):
+            return self.__int__() <= other.__int__()
+        return True
 
     def __eq__(self, other):
         if isinstance(other, (int, long)):
             return self.__int__() == other
-        return super(SiteIDHook, self).__eq__(other)
+        elif isinstance(other, SiteIDHook):
+            return self.__int__() == other.__int__()
+        return False
 
     def __ne__(self, other):
         return not self.__eq__(other)

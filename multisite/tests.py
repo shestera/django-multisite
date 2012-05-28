@@ -124,6 +124,32 @@ class TestSiteIDHook(TestCase):
         self.assertFalse(self.site_id > 1)
         self.assertTrue(self.site_id >= 1)
 
+    def test_compare_site_ids(self):
+        self.site_id.set(1)
+        self.assertEqual(self.site_id, self.site_id)
+        self.assertFalse(self.site_id != self.site_id)
+        self.assertFalse(self.site_id < self.site_id)
+        self.assertTrue(self.site_id <= self.site_id)
+        self.assertFalse(self.site_id > self.site_id)
+        self.assertTrue(self.site_id >= self.site_id)
+
+    def test_compare_differing_types(self):
+        self.site_id.set(1)
+        # SiteIDHook <op> int
+        self.assertNotEqual(self.site_id, '1')
+        self.assertFalse(self.site_id == '1')
+        self.assertTrue(self.site_id < '1')
+        self.assertTrue(self.site_id <= '1')
+        self.assertFalse(self.site_id > '1')
+        self.assertFalse(self.site_id >= '1')
+        # int <op> SiteIDHook
+        self.assertNotEqual('1', self.site_id)
+        self.assertFalse('1' == self.site_id)
+        self.assertFalse('1' < self.site_id)
+        self.assertFalse('1' <= self.site_id)
+        self.assertTrue('1' > self.site_id)
+        self.assertTrue('1' >= self.site_id)
+
     def test_set(self):
         self.site_id.set(10)
         self.assertEqual(int(self.site_id), 10)
