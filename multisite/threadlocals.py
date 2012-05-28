@@ -44,6 +44,9 @@ class SiteID(local):
         self.reset()
 
     def __repr__(self):
+        return repr(self.__int__())
+
+    def __str__(self):
         return str(self.__int__())
 
     def __int__(self):

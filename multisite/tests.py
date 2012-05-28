@@ -168,6 +168,11 @@ class TestSiteID(TestCase):
         self.site_id.set(20)
         self.assertEqual(hash(self.site_id), 20)
 
+    def test_str_repr(self):
+        self.site_id.set(10)
+        self.assertEqual(str(self.site_id), '10')
+        self.assertEqual(repr(self.site_id), '10')
+
 
 class TestSiteIDHook(TestCase):
     def test_deprecation_warning(self):
