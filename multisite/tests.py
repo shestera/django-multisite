@@ -12,7 +12,7 @@ except ImportError:
     from override_settings import override_settings
 
 from . import SiteDomain, SiteID, threadlocals
-from .middleware import DynamicSiteMiddleware, HOST_CACHE
+from .middleware import DynamicSiteMiddleware
 from .threadlocals import SiteIDHook
 
 
@@ -45,7 +45,10 @@ class TestContribSite(TestCase):
 
 @skipUnless(Site._meta.installed,
             'django.contrib.sites is not in settings.INSTALLED_APPS')
-@override_settings(SITE_ID=SiteID(default=1))
+@override_settings(
+    SITE_ID=SiteID(default=1),
+    CACHE_MULTISITE_ALIAS='django.core.cache.backends.dummy.DummyCache',
+)
 class DynamicSiteMiddlewareTest(TestCase):
     def setUp(self):
         self.host = 'example.com'
@@ -54,11 +57,9 @@ class DynamicSiteMiddlewareTest(TestCase):
         Site.objects.all().delete()
         self.site = Site.objects.create(domain=self.host)
 
-        HOST_CACHE.clear()
         self.middleware = DynamicSiteMiddleware()
 
     def tearDown(self):
-        HOST_CACHE.clear()
         settings.SITE_ID.reset()
 
     def test_valid_domain(self):
@@ -109,6 +110,38 @@ class DynamicSiteMiddlewareTest(TestCase):
         request = self.factory.get('/')
         self.assertEqual(self.middleware.process_request(request), None)
         self.assertEqual(settings.SITE_ID, 1)
+
+
+@override_settings(
+    SITE_ID=SiteID(default=1),
+    CACHE_MULTISITE_ALIAS='django.core.cache.backends.locmem.LocMemCache',
+)
+class CacheTest(TestCase):
+    def setUp(self):
+        self.host = 'example.com'
+        self.factory = RequestFactory(host=self.host)
+
+        Site.objects.all().delete()
+        self.site = Site.objects.create(domain=self.host)
+
+        self.middleware = DynamicSiteMiddleware()
+
+    def test_site_domain_changed(self):
+        # Test to ensure that the cache is cleared properly
+        cache_key = self.middleware.get_cache_key(self.host)
+        self.assertEqual(self.middleware.cache.get(cache_key), None)
+        # Make the request
+        request = self.factory.get('/')
+        self.assertEqual(self.middleware.process_request(request), None)
+        self.assertEqual(self.middleware.cache.get(cache_key), self.site.pk)
+        # Change the domain name
+        self.site.domain = 'example.org'
+        self.site.save()
+        self.assertEqual(self.middleware.cache.get(cache_key), None)
+        # Make the request again, which will now be invalid
+        request = self.factory.get('/')
+        self.assertEqual(self.middleware.process_request(request), None)
+        self.assertEqual(settings.SITE_ID, Site.objects.all()[0].pk)
 
 
 class TestSiteID(TestCase):
