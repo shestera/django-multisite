@@ -7,6 +7,8 @@ try:
 except ImportError:
     from django.utils._threading_local import local
 
+from django.core.exceptions import ImproperlyConfigured
+
 
 _thread_locals = local()
 
@@ -36,7 +38,7 @@ class SiteID(local):
     def __init__(self, default=None, *args, **kwargs):
         """
         ``default``, if specified, determines the default SITE_ID,
-        if it is unset.
+        if that is unset.
         """
         if default is not None and not isinstance(default, (int, long)):
             raise ValueError("%r is not a valid default." % default)
@@ -51,9 +53,7 @@ class SiteID(local):
 
     def __int__(self):
         if self.site_id is None:
-            if self.default is None:
-                raise ValueError('SITE_ID has not been set.')
-            return self.default
+            return self.get_default()
         return self.site_id
 
     def __lt__(self, other):
@@ -97,6 +97,37 @@ class SiteID(local):
 
     def reset(self):
         self.site_id = None
+
+    def get_default(self):
+        """Returns the default SITE_ID."""
+        if self.default is None:
+            raise ValueError('SITE_ID has not been set.')
+        return self.default
+
+
+class SiteDomain(SiteID):
+    def __init__(self, default, *args, **kwargs):
+        """
+        ``default``, if specified, is the default domain name, resolved
+        to SITE_ID, if that is unset.
+        """
+        if not isinstance(default, basestring):
+            raise ValueError("%r is not a valid default domain." % default)
+        self.default_domain = default
+        self.default = None
+        self.reset()
+
+    def get_default(self):
+        """Returns the default SITE_ID that matches the default domain name."""
+        from django.contrib.sites.models import Site
+        if not Site._meta.installed:
+            raise ImproperlyConfigured('django.contrib.sites is not in '
+                                       'settings.INSTALLED_APPS')
+
+        if self.default is None:
+            qset = Site.objects.only('id')
+            self.default = qset.get(domain=self.default_domain).id
+        return self.default
 
 
 def SiteIDHook():

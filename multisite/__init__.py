@@ -1,1 +1,1 @@
-from .threadlocals import SiteID
+from .threadlocals import SiteDomain, SiteID

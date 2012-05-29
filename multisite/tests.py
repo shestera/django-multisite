@@ -11,7 +11,7 @@ try:
 except ImportError:
     from override_settings import override_settings
 
-from . import SiteID, threadlocals
+from . import SiteDomain, SiteID, threadlocals
 from .middleware import DynamicSiteMiddleware, HOST_CACHE
 from .threadlocals import SiteIDHook
 
@@ -33,6 +33,7 @@ class RequestFactory(DjangoRequestFactory):
 @override_settings(SITE_ID=SiteID())
 class TestContribSite(TestCase):
     def setUp(self):
+        Site.objects.all().delete()
         self.site = Site.objects.create(domain='example.com')
         settings.SITE_ID.set(self.site.id)
 
@@ -112,6 +113,7 @@ class DynamicSiteMiddlewareTest(TestCase):
 
 class TestSiteID(TestCase):
     def setUp(self):
+        Site.objects.all().delete()
         self.site = Site.objects.create(domain='example.com')
         self.site_id = SiteID()
 
@@ -172,6 +174,30 @@ class TestSiteID(TestCase):
         self.site_id.set(10)
         self.assertEqual(str(self.site_id), '10')
         self.assertEqual(repr(self.site_id), '10')
+
+
+@skipUnless(Site._meta.installed,
+            'django.contrib.sites is not in settings.INSTALLED_APPS')
+class TestSiteDomain(TestCase):
+    def setUp(self):
+        Site.objects.all().delete()
+        self.domain = 'example.com'
+        self.site = Site.objects.create(domain=self.domain)
+
+    def test_init(self):
+        self.assertEqual(int(SiteDomain(default=self.domain)), self.site.id)
+        self.assertRaises(Site.DoesNotExist,
+                          int, SiteDomain(default='invalid'))
+        self.assertRaises(ValueError, SiteDomain, default=None)
+        self.assertRaises(ValueError, SiteDomain, default=1)
+
+    def test_deferred_site(self):
+        domain = 'example.org'
+        self.assertRaises(Site.DoesNotExist,
+                          int, SiteDomain(default=domain))
+        site = Site.objects.create(domain=domain)
+        self.assertEqual(int(SiteDomain(default=domain)),
+                         site.id)
 
 
 class TestSiteIDHook(TestCase):
