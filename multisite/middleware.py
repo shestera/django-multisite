@@ -23,7 +23,7 @@ class DynamicSiteMiddleware(object):
         return 'multisite.site_id.%s.%s' % (self.key_prefix, host.hexdigest())
 
     def process_request(self, request):
-        host = request.get_host()
+        host = request.get_host().lower()
         shost = host.rsplit(':', 1)[0] # only host, without port
         cache_key = self.get_cache_key(host)
 

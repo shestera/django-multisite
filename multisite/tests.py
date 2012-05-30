@@ -80,6 +80,12 @@ class DynamicSiteMiddlewareTest(TestCase):
         self.assertEqual(self.middleware.process_request(request), None)
         self.assertEqual(settings.SITE_ID, self.site.pk)
 
+    def test_case_sensitivity(self):
+        # Make the request in all uppercase
+        request = self.factory.get('/', host=self.host.upper())
+        self.assertEqual(self.middleware.process_request(request), None)
+        self.assertEqual(settings.SITE_ID, self.site.pk)
+
     def test_change_domain(self):
         # Make the request
         request = self.factory.get('/')
