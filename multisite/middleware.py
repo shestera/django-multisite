@@ -2,8 +2,12 @@
 
 from django.conf import settings
 from django.contrib.sites.models import Site
+from django.core import mail
 from django.core.cache import get_cache
+from django.core.exceptions import ImproperlyConfigured
+from django.core.urlresolvers import get_callable
 from django.db.models.signals import pre_save, post_delete
+from django.http import Http404
 from django.utils.hashcompat import md5_constructor
 
 
@@ -26,47 +30,100 @@ class DynamicSiteMiddleware(object):
         host = md5_constructor(host)
         return 'multisite.site_id.%s.%s' % (self.key_prefix, host.hexdigest())
 
+    def get_testserver_site(self, host):
+        """
+        Returns valid Site when running Django tests. Otherwise, returns None.
+        """
+        if hasattr(mail, 'outbox') and host == 'testserver':
+            try:
+                # Prefer the default SITE_ID
+                site_id = settings.SITE_ID.get_default()
+                return Site.objects.get(pk=site_id)
+            except ValueError:
+                # Fallback to the first Site object
+                return Site.objects.order_by('pk')[0]
+
+    def get_site(self, host):
+        """
+        Returns the Site that matches ``host``.
+
+        ``host`` can be a bare hostname ``'example.com'`` or a
+        hostname with a port number``'example.com:8000'``.
+
+        Attempts to match by the full hostname with the port number
+        first, against the domain field in Site. If that fails, it
+        will try to match the bare hostname with no port number.
+
+        All comparisons are done case-insensitively.
+        """
+        try:
+            # Get by whole hostname
+            return Site.objects.get(domain__iexact=host)
+        except Site.DoesNotExist:
+            shost = host.rsplit(':', 1)[0]
+            if shost != host:
+                # Get by hostname without port
+                return Site.objects.get(domain__iexact=shost)
+            raise
+
+    def fallback_view(self, request):
+        """
+        Runs the fallback view function in ``settings.MULTISITE_FALLBACK``.
+
+        If ``MULTISITE_FALLBACK`` is None, raises an Http404 error.
+
+        If ``MULTISITE_FALLBACK`` is callable, will treat that
+        callable as a view that returns an HttpResponse.
+
+        If ``MULTISITE_FALLBACK`` is a string, will resolve it to a
+        view that returns an HttpResponse.
+
+        In order to use a generic view that takes additional
+        parameters, ``settings.MULTISITE_FALLBACK_KWARGS`` may be a
+        dictionary of additional keyword arguments.
+        """
+        fallback = getattr(settings, 'MULTISITE_FALLBACK', None)
+        if fallback is None:
+            raise Http404
+        if callable(fallback):
+            view = fallback
+        else:
+            view = get_callable(fallback)
+            if not callable(view):
+                raise ImproperlyConfigured(
+                    'settings.MULTISITE_FALLBACK is not callable: %s' %
+                    fallback
+                )
+
+        kwargs = getattr(settings, 'MULTISITE_FALLBACK_KWARGS', {})
+        if hasattr(view, 'as_view'):
+            # Class-based view
+            return view.as_view(**kwargs)(request)
+        # View function
+        return view(request, **kwargs)
+
     def process_request(self, request):
         host = request.get_host().lower()
-        shost = host.rsplit(':', 1)[0] # only host, without port
         cache_key = self.get_cache_key(host)
 
+        # Find the SITE_ID in the cache
         site_id = self.cache.get(cache_key)
         if site_id is not None:
             settings.SITE_ID.set(site_id)
             return
 
-        try: # get by whole hostname
-            site = Site.objects.get(domain=host)
-            self.cache.set(cache_key, site.pk)
-            settings.SITE_ID.set(site.pk)
-            return
+        # Cache missed
+        try:
+            site = self.get_site(host)
         except Site.DoesNotExist:
-            pass
+            site = self.get_testserver_site(host)
+            if site is None:
+                # Fallback using settings.MULTISITE_FALLBACK
+                settings.SITE_ID.reset()
+                return self.fallback_view(request)
 
-        if shost != host: # get by hostname without port
-            try:
-                site = Site.objects.get(domain=shost)
-                self.cache.set(cache_key, site.pk)
-                settings.SITE_ID.set(site.pk)
-                return
-            except Site.DoesNotExist:
-                pass
-
-        try: # get by settings.SITE_ID
-            site = Site.objects.get(pk=settings.SITE_ID)
-            self.cache.set(cache_key, site.pk)
-            return
-        except Site.DoesNotExist:
-            pass
-
-        try: # misconfigured settings?
-            site = Site.objects.all()[0]
-            self.cache.set(cache_key, site.pk)
-            settings.SITE_ID.set(site.pk)
-            return
-        except IndexError: # no sites in db
-            pass
+        self.cache.set(cache_key, site.pk)
+        settings.SITE_ID.set(site.pk)
 
     def site_domain_changed_hook(self, sender, instance, raw, *args, **kwargs):
         """Clears the cache if Site.domain has changed."""

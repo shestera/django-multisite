@@ -2,6 +2,8 @@ import warnings
 
 from django.conf import settings
 from django.contrib.sites.models import Site
+from django.core.exceptions import ImproperlyConfigured
+from django.http import Http404
 from django.test import TestCase
 from django.test.client import RequestFactory as DjangoRequestFactory
 from django.utils.unittest import skipUnless
@@ -46,8 +48,9 @@ class TestContribSite(TestCase):
 @skipUnless(Site._meta.installed,
             'django.contrib.sites is not in settings.INSTALLED_APPS')
 @override_settings(
-    SITE_ID=SiteID(default=1),
+    SITE_ID=SiteID(default=0),
     CACHE_MULTISITE_ALIAS='django.core.cache.backends.dummy.DummyCache',
+    MULTISITE_FALLBACK=None,
 )
 class DynamicSiteMiddlewareTest(TestCase):
     def setUp(self):
@@ -100,22 +103,107 @@ class DynamicSiteMiddlewareTest(TestCase):
     def test_invalid_domain(self):
         # Make the request
         request = self.factory.get('/', host='invalid')
-        self.assertEqual(self.middleware.process_request(request), None)
-        self.assertEqual(settings.SITE_ID, Site.objects.all()[0].pk)
+        self.assertRaises(Http404,
+                          self.middleware.process_request, request)
+        self.assertEqual(settings.SITE_ID, 0)
 
     def test_invalid_domain_port(self):
         # Make the request
         request = self.factory.get('/', host=':8000')
-        self.assertEqual(self.middleware.process_request(request), None)
-        self.assertEqual(settings.SITE_ID, Site.objects.all()[0].pk)
+        self.assertRaises(Http404,
+                          self.middleware.process_request, request)
+        self.assertEqual(settings.SITE_ID, 0)
 
     def test_no_sites(self):
         # Remove all Sites
         Site.objects.all().delete()
         # Make the request
         request = self.factory.get('/')
+        self.assertRaises(Http404,
+                          self.middleware.process_request, request)
+        self.assertEqual(settings.SITE_ID, 0)
+
+
+@skipUnless(Site._meta.installed,
+            'django.contrib.sites is not in settings.INSTALLED_APPS')
+@override_settings(
+    SITE_ID=SiteID(default=0),
+    CACHE_MULTISITE_ALIAS='django.core.cache.backends.dummy.DummyCache',
+    MULTISITE_FALLBACK=None,
+    MULTISITE_FALLBACK_KWARGS={},
+)
+class DynamicSiteMiddlewareFallbackTest(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory(host='unknown')
+
+        Site.objects.all().delete()
+
+        self.middleware = DynamicSiteMiddleware()
+
+    def tearDown(self):
+        settings.SITE_ID.reset()
+
+    def test_404(self):
+        request = self.factory.get('/')
+        self.assertRaises(Http404,
+                          self.middleware.process_request, request)
+        self.assertEqual(settings.SITE_ID, 0)
+
+    def test_testserver(self):
+        host = 'testserver'
+        site = Site.objects.create(domain=host)
+        request = self.factory.get('/', host=host)
         self.assertEqual(self.middleware.process_request(request), None)
-        self.assertEqual(settings.SITE_ID, 1)
+        self.assertEqual(settings.SITE_ID, site.pk)
+
+    def test_string_function(self):
+        # Function based
+        settings.MULTISITE_FALLBACK = 'django.views.generic.simple.redirect_to'
+        settings.MULTISITE_FALLBACK_KWARGS = {'url': 'http://example.com/',
+                                              'permanent': False}
+        request = self.factory.get('/')
+        response = self.middleware.process_request(request)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'],
+                         settings.MULTISITE_FALLBACK_KWARGS['url'])
+
+    def test_string_class(self):
+        # Class based
+        settings.MULTISITE_FALLBACK = 'django.views.generic.base.RedirectView'
+        settings.MULTISITE_FALLBACK_KWARGS = {'url': 'http://example.com/',
+                                              'permanent': False}
+        request = self.factory.get('/')
+        response = self.middleware.process_request(request)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'],
+                         settings.MULTISITE_FALLBACK_KWARGS['url'])
+
+    def test_function_view(self):
+        from django.views.generic.simple import redirect_to
+        settings.MULTISITE_FALLBACK = redirect_to
+        settings.MULTISITE_FALLBACK_KWARGS = {'url': 'http://example.com/',
+                                              'permanent': False}
+        request = self.factory.get('/')
+        response = self.middleware.process_request(request)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'],
+                         settings.MULTISITE_FALLBACK_KWARGS['url'])
+
+    def test_class_view(self):
+        from django.views.generic.base import RedirectView
+        settings.MULTISITE_FALLBACK = RedirectView.as_view(
+            url='http://example.com/', permanent=False
+        )
+        request = self.factory.get('/')
+        response = self.middleware.process_request(request)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], 'http://example.com/')
+
+    def test_invalid(self):
+        settings.MULTISITE_FALLBACK = ''
+        request = self.factory.get('/')
+        self.assertRaises(ImproperlyConfigured,
+                          self.middleware.process_request, request)
 
 
 @skipUnless(Site._meta.installed,
@@ -127,8 +215,9 @@ class DynamicSiteMiddlewareSettingsTest(TestCase):
 
 
 @override_settings(
-    SITE_ID=SiteID(default=1),
+    SITE_ID=SiteID(default=0),
     CACHE_MULTISITE_ALIAS='django.core.cache.backends.locmem.LocMemCache',
+    MULTISITE_FALLBACK=None,
 )
 class CacheTest(TestCase):
     def setUp(self):
@@ -154,8 +243,9 @@ class CacheTest(TestCase):
         self.assertEqual(self.middleware.cache.get(cache_key), None)
         # Make the request again, which will now be invalid
         request = self.factory.get('/')
-        self.assertEqual(self.middleware.process_request(request), None)
-        self.assertEqual(settings.SITE_ID, Site.objects.all()[0].pk)
+        self.assertRaises(Http404,
+                          self.middleware.process_request, request)
+        self.assertEqual(settings.SITE_ID, 0)
 
 
 class TestSiteID(TestCase):

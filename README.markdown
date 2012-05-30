@@ -52,6 +52,21 @@ If you have set CACHE\_MULTISITE\_ALIAS to a custom value, _e.g._
         },
     }
 
+By default, if the domain name is unknown, multisite will respond with
+an HTTP 404 Not Found error. To change this behaviour, add to
+settings.py:
+
+    # The view function or class-based view that django-multisite will
+    # use when it cannot match the hostname with a Site. This can be
+    # the name of the function or the function itself.
+    # Default: None
+    MULTISITE_FALLBACK = 'django.views.generic.base.RedirectView
+
+    # Keyword arguments for the MULTISITE_FALLBACK view.
+    # Default: {}
+    MULTISITE_FALLBACK_KWARGS = {'url': 'http://example.com/',
+                                 'permanent': False}
+
 Create a directory settings.TEMPLATE_DIRS directory with the names of domains, such as:
 
     mkdir templates/example.com
