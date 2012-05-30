@@ -118,6 +118,14 @@ class DynamicSiteMiddlewareTest(TestCase):
         self.assertEqual(settings.SITE_ID, 1)
 
 
+@skipUnless(Site._meta.installed,
+            'django.contrib.sites is not in settings.INSTALLED_APPS')
+@override_settings(SITE_ID=0,)
+class DynamicSiteMiddlewareSettingsTest(TestCase):
+    def test_invalid_settings(self):
+        self.assertRaises(TypeError, DynamicSiteMiddleware)
+
+
 @override_settings(
     SITE_ID=SiteID(default=1),
     CACHE_MULTISITE_ALIAS='django.core.cache.backends.locmem.LocMemCache',

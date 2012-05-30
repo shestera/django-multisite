@@ -9,6 +9,10 @@ from django.utils.hashcompat import md5_constructor
 
 class DynamicSiteMiddleware(object):
     def __init__(self):
+        if not hasattr(settings.SITE_ID, 'set'):
+            raise TypeError('Invalid type for settings.SITE_ID: %s' %
+                            type(settings.SITE_ID).__name__)
+
         self.cache_alias = getattr(settings, 'CACHE_MULTISITE_ALIAS',
                                    'default')
         self.key_prefix = getattr(settings, 'CACHE_MULTISITE_KEY_PREFIX',
