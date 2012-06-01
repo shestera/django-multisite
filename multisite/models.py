@@ -304,4 +304,4 @@ pre_save.connect(Alias.site_domain_changed_hook, sender=Site)
 post_save.connect(Alias.site_created_hook, sender=Site)
 
 # Hook to handle syncdb creating the Alias table
-post_syncdb.connect(Alias.db_table_created_hook, sender=Alias.__module__)
+post_syncdb.connect(Alias.db_table_created_hook)
