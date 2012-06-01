@@ -147,6 +147,7 @@ class Alias(models.Model):
                                 unique=True)
     is_canonical = models.NullBooleanField(default=None, editable=False,
                                            validators=[validate_true_or_none])
+    redirect_to_canonical = models.BooleanField(default=True)
 
     objects = AliasManager()
     canonical = CanonicalAliasManager()
