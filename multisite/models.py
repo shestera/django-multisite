@@ -18,20 +18,20 @@ class AliasManager(models.Manager):
     def get_query_set(self):
         return super(AliasManager, self).get_query_set().select_related('site')
 
-    def resolve(self, netloc):
+    def resolve(self, host, port=None):
         """
-        Returns the Alias that best matches ``netloc``, or None.
+        Returns the Alias that best matches ``host`` and ``port``, or None.
 
-        ``netloc`` can be a bare hostname ``'example.com'`` or a
-        hostname with a port number``'example.com:8000'``.
+        ``host`` is a hostname like ``'example.com'``.
+        ``port`` is a port number like 8000, or None.
 
-        Attempts to match by netloc with the port number first,
-        against Alias.domain. If that fails, it will try to match the
-        bare hostname with no port number.
+        Attempts to first match by 'host:port' against
+        Alias.domain. If that fails, it will try to match the bare
+        'host' with no port number.
 
         All comparisons are done case-insensitively.
         """
-        domains = self._expand_netloc(netloc)
+        domains = self._expand_netloc(host=host, port=port)
         q = reduce(operator.or_, (Q(domain__iexact=d) for d in domains))
         aliases = dict((a.domain, a) for a in self.get_query_set().filter(q))
         for domain in domains:
@@ -41,9 +41,12 @@ class AliasManager(models.Manager):
                 pass
 
     @classmethod
-    def _expand_netloc(cls, netloc):
+    def _expand_netloc(cls, host, port=None):
         """
-        Returns a list of possible domain expansions for ``netloc``.
+        Returns a list of possible domain expansions for ``host`` and ``port``.
+
+        ``host`` is a hostname like ``'example.com'``.
+        ``port`` is a port number like 8000, or None.
 
         Expansions are ordered from highest to lowest preference and may
         include wildcards. Examples::
@@ -51,19 +54,14 @@ class AliasManager(models.Manager):
         >>> AliasManager._expand_netloc('www.example.com')
         ['www.example.com', '*.example.com', '*.com', '*']
 
-        >>> AliasManager._expand_netloc('www.example.com:80')
+        >>> AliasManager._expand_netloc('www.example.com', 80)
         ['www.example.com:80', 'www.example.com',
          '*.example.com:80', '*.example.com',
          '*.com:80', '*.com',
          '*:80', '*']
         """
-        if ':' in netloc:
-            host, port = netloc.rsplit(':', 1)
-        else:
-            host, port = netloc, None
-
         if not host:
-            raise ValueError("Invalid netloc: %r" % netloc)
+            raise ValueError(u"Invalid host: %s" % host)
 
         try:
             validate_ipv4_address(host)
@@ -79,7 +77,7 @@ class AliasManager(models.Manager):
             else:
                 host = '.'.join(['*'] + bits[i:])
             if port:
-                result.append(host + ':' + port)
+                result.append("%s:%s" % (host, port))
             result.append(host)
         return result
 

@@ -93,10 +93,15 @@ class DynamicSiteMiddleware(object):
             settings.SITE_ID.set(site_id)
             return
 
+        if ':' in netloc:
+            host, port = netloc.rsplit(':', 1)
+        else:
+            host, port = netloc, None
+
         # Cache missed
         site = None
         try:
-            alias = Alias.objects.resolve(netloc)
+            alias = Alias.objects.resolve(host=host, port=port)
             if alias:
                 site = alias.site
         except ValueError:

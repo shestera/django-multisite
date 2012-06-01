@@ -557,19 +557,19 @@ class AliasTest(TestCase):
     def test_expand_netloc(self):
         _expand_netloc = Alias.objects._expand_netloc
         self.assertRaises(ValueError, _expand_netloc, '')
-        self.assertRaises(ValueError, _expand_netloc, ':8000')
-        self.assertEqual(_expand_netloc('testserver:8000'),
+        self.assertRaises(ValueError, _expand_netloc, '', 8000)
+        self.assertEqual(_expand_netloc('testserver', 8000),
                          ['testserver:8000', 'testserver',
                           '*:8000', '*'])
         self.assertEqual(_expand_netloc('testserver'),
                          ['testserver', '*'])
-        self.assertEqual(_expand_netloc('example.com:8000'),
+        self.assertEqual(_expand_netloc('example.com', 8000),
                          ['example.com:8000', 'example.com',
                           '*.com:8000', '*.com',
                           '*:8000', '*'])
         self.assertEqual(_expand_netloc('example.com'),
                          ['example.com', '*.com', '*'])
-        self.assertEqual(_expand_netloc('www.example.com:8000'),
+        self.assertEqual(_expand_netloc('www.example.com', 8000),
                          ['www.example.com:8000', 'www.example.com',
                           '*.example.com:8000', '*.example.com',
                           '*.com:8000', '*.com',
