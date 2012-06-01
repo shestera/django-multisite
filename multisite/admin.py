@@ -8,18 +8,21 @@ class MultisiteChangeList(ChangeList):
     A ChangeList like the built-in admin one, but it excludes site filters for
     sites you're not associated with, unless you're a super-user.
 
-    At this point, it's probably fragile, given its reliance on Django internals.
+    At this point, it's probably fragile, given its reliance on Django
+    internals.
     """
     def get_filters(self, request, *args, **kwargs):
         """
-        This might be considered a fragile function, since it relies on a fair bit
-        of Django's internals.
+        This might be considered a fragile function, since it relies on a
+        fair bit of Django's internals.
         """
-        filter_specs, has_filter_specs = super(MultisiteChangeList, self).get_filters(request, *args, **kwargs)
+        get_filters = super(MultisiteChangeList, self).get_filters
+        filter_specs, has_filter_specs = get_filters(request, *args, **kwargs)
         if request.user.is_superuser or not has_filter_specs:
             return filter_specs, has_filter_specs
         new_filter_specs = []
-        user_sites = frozenset(request.user.get_profile().sites.values_list("pk", "domain"))
+        profile = request.user.get_profile()
+        user_sites = frozenset(profile.sites.values_list("pk", "domain"))
         for filter_spec in filter_specs:
             try:
                 rel_to = filter_spec.field.rel.to
@@ -39,10 +42,10 @@ class MultisiteChangeList(ChangeList):
         return new_filter_specs, bool(new_filter_specs)
 
 
-
 class MultisiteModelAdmin(admin.ModelAdmin):
     """
-    A very helpful modeladmin class for handling multi-site django applications.
+    A very helpful ModelAdmin class for handling multi-site django
+    applications.
     """
 
     filter_sites_by_current_object = False
@@ -52,9 +55,9 @@ class MultisiteModelAdmin(admin.ModelAdmin):
         Filters lists of items to items belonging to sites assigned to the
         current member.
 
-        Additionally, for cases where the field containing a reference to 'site'
-        or 'sites' isn't immediate-- one can supply the ModelAdmin class with
-        a list of fields to check the site of:
+        Additionally, for cases where the field containing a reference
+        to 'site' or 'sites' isn't immediate -- one can supply the
+        ModelAdmin class with a list of fields to check the site of:
 
          - multisite_filter_fields
             A list of paths to a 'site' or 'sites' field on a related model to
@@ -68,36 +71,40 @@ class MultisiteModelAdmin(admin.ModelAdmin):
 
         user_sites = request.user.get_profile().sites.all()
         if hasattr(qs.model, "site"):
-            qs = qs.filter(site__in = user_sites)
+            qs = qs.filter(site__in=user_sites)
         elif hasattr(qs.model, "sites"):
-            qs = qs.filter(sites__in = user_sites)
+            qs = qs.filter(sites__in=user_sites)
 
         if hasattr(self, "multisite_filter_fields"):
             for field in self.multisite_filter_fields:
                 qkwargs = {
-                    "{field}__in".format(field = field): user_sites
+                    "{field}__in".format(field=field): user_sites
                 }
                 qs = qs.filter(**qkwargs)
 
         return qs
 
-    def add_view(self, request, form_url = '', extra_context = None):
+    def add_view(self, request, form_url='', extra_context=None):
         if self.filter_sites_by_current_object:
             if hasattr(self.model, "site") or hasattr(self.model, "sites"):
                 self.object_sites = tuple()
-        return super(MultisiteModelAdmin, self).add_view(request, form_url, extra_context)
+        return super(MultisiteModelAdmin, self).add_view(request, form_url,
+                                                         extra_context)
 
-    def change_view(self, request, object_id, extra_context = None):
+    def change_view(self, request, object_id, extra_context=None):
         if self.filter_sites_by_current_object:
             object_instance = self.get_object(request, object_id)
             try:
-                self.object_sites = object_instance.sites.values_list("pk", flat = True)
+                self.object_sites = object_instance.sites.values_list(
+                    "pk", flat=True
+                )
             except AttributeError:
                 try:
-                    self.object_sites = (object_instance.site.pk, )
+                    self.object_sites = (object_instance.site.pk,)
                 except AttributeError:
-                    pass # assume the object doesn't belong to a site
-        return super(MultisiteModelAdmin, self).change_view(request, object_id, extra_context)
+                    pass  # assume the object doesn't belong to a site
+        return super(MultisiteModelAdmin, self).change_view(request, object_id,
+                                                            extra_context)
 
     def handle_multisite_foreign_keys(self, db_field, request, **kwargs):
         """
@@ -114,15 +121,16 @@ class MultisiteModelAdmin(admin.ModelAdmin):
 
             - multisite_foreign_key_site_path
 
-        to a dictionary pointing specific foreign key field instances from their
-        model to the site field to filter on something like:
+        to a dictionary pointing specific foreign key field instances
+        from their model to the site field to filter on something
+        like:
 
             multisite_indirect_foreign_key_path = {
                     'plan_instance': 'plan__site'
                 }
 
-        for a field named 'plan_instance' referencing a model with a foreign key
-        named 'plan' having a foreign key to 'site'.
+        for a field named 'plan_instance' referencing a model with a
+        foreign key named 'plan' having a foreign key to 'site'.
 
         To filter the FK queryset to the same sites the current object belongs
         to, simply set `filter_sites_by_current_object` to `True`.
@@ -139,44 +147,50 @@ class MultisiteModelAdmin(admin.ModelAdmin):
             user_sites = Site.objects.all()
         else:
             user_sites = request.user.get_profile().sites.all()
-        if self.filter_sites_by_current_object and hasattr(self, "object_sites"):
-            sites = user_sites.filter(
-                        pk__in = self.object_sites
-                    )
+        if self.filter_sites_by_current_object and \
+           hasattr(self, "object_sites"):
+            sites = user_sites.filter(pk__in=self.object_sites)
         else:
             sites = user_sites
 
         if hasattr(db_field.rel.to, "site"):
             kwargs["queryset"] = db_field.rel.to._default_manager.filter(
-                site__in = user_sites
+                site__in=user_sites
             )
         if hasattr(db_field.rel.to, "sites"):
             kwargs["queryset"] = db_field.rel.to._default_manager.filter(
-                sites__in = user_sites
+                sites__in=user_sites
             )
         if db_field.name == "site" or db_field.name == "sites":
             kwargs["queryset"] = user_sites
-        if hasattr(self, "multisite_indirect_foreign_key_path"):
-            if db_field.name in self.multisite_indirect_foreign_key_path.keys():
-                qkwargs = {
-                    self.multisite_indirect_foreign_key_path[db_field.name]: user_sites
-                }
-                kwargs["queryset"] = db_field.rel.to._default_manager.filter(**qkwargs)
+        if hasattr(self, "multisite_indirect_foreign_key_path") and \
+           db_field.name in self.multisite_indirect_foreign_key_path.keys():
+            fkey = self.multisite_indirect_foreign_key_path[db_field.name]
+            kwargs["queryset"] = db_field.rel.to._default_manager.filter(
+                **{fkey: user_sites}
+            )
 
         return kwargs
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        kwargs  = self.handle_multisite_foreign_keys(db_field, request, **kwargs)
-        return super(MultisiteModelAdmin, self).formfield_for_foreignkey(db_field, request, **kwargs)
+        kwargs = self.handle_multisite_foreign_keys(db_field, request,
+                                                    **kwargs)
+        return super(MultisiteModelAdmin, self).formfield_for_foreignkey(
+            db_field, request, **kwargs
+        )
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
-        kwargs = self.handle_multisite_foreign_keys(db_field, request, **kwargs)
-        return super(MultisiteModelAdmin, self).formfield_for_manytomany(db_field, request, **kwargs)
+        kwargs = self.handle_multisite_foreign_keys(db_field, request,
+                                                    **kwargs)
+        return super(MultisiteModelAdmin, self).formfield_for_manytomany(
+            db_field, request, **kwargs
+        )
 
     def get_changelist(self, request, **kwargs):
         """
-        Restrict the site filter (if there is one) to sites you are associated with,
-        or remove it entirely if you're just associated with one site. Unless you're a
-        super-user, of course.
+        Restrict the site filter (if there is one) to sites you are
+        associated with, or remove it entirely if you're just
+        associated with one site. Unless you're a super-user, of
+        course.
         """
         return MultisiteChangeList
