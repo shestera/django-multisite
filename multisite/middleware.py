@@ -25,16 +25,17 @@ class DynamicSiteMiddleware(object):
         pre_save.connect(self.site_domain_changed_hook, sender=Site)
         post_delete.connect(self.site_deleted_hook, sender=Site)
 
-    def get_cache_key(self, host):
-        """Returns a cache key based on ``host``."""
-        host = md5_constructor(host)
-        return 'multisite.site_id.%s.%s' % (self.key_prefix, host.hexdigest())
+    def get_cache_key(self, netloc):
+        """Returns a cache key based on ``netloc``."""
+        netloc = md5_constructor(netloc)
+        return 'multisite.site_id.%s.%s' % (self.key_prefix,
+                                            netloc.hexdigest())
 
-    def get_testserver_site(self, host):
+    def get_testserver_site(self, netloc):
         """
         Returns valid Site when running Django tests. Otherwise, returns None.
         """
-        if hasattr(mail, 'outbox') and host == 'testserver':
+        if hasattr(mail, 'outbox') and netloc == 'testserver':
             try:
                 # Prefer the default SITE_ID
                 site_id = settings.SITE_ID.get_default()
@@ -43,27 +44,28 @@ class DynamicSiteMiddleware(object):
                 # Fallback to the first Site object
                 return Site.objects.order_by('pk')[0]
 
-    def get_site(self, host):
+    def get_site(self, netloc):
         """
-        Returns the Site that matches ``host``.
+        Returns the Site that matches ``netloc``.
 
-        ``host`` can be a bare hostname ``'example.com'`` or a
+        ``netloc`` can be a bare hostname ``'example.com'`` or a
         hostname with a port number``'example.com:8000'``.
 
-        Attempts to match by the full hostname with the port number
-        first, against the domain field in Site. If that fails, it
-        will try to match the bare hostname with no port number.
+        Attempts to match by netloc with the port number first,
+        against the domain field in Site. If that fails, it will try
+        to match the bare hostname with no port number.
 
         All comparisons are done case-insensitively.
+
         """
         try:
-            # Get by whole hostname
-            return Site.objects.get(domain__iexact=host)
+            # Get by netloc
+            return Site.objects.get(domain__iexact=netloc)
         except Site.DoesNotExist:
-            shost = host.rsplit(':', 1)[0]
-            if shost != host:
+            host = netloc.rsplit(':', 1)[0]
+            if host != netloc:
                 # Get by hostname without port
-                return Site.objects.get(domain__iexact=shost)
+                return Site.objects.get(domain__iexact=host)
             raise
 
     def fallback_view(self, request):
@@ -103,8 +105,8 @@ class DynamicSiteMiddleware(object):
         return view(request, **kwargs)
 
     def process_request(self, request):
-        host = request.get_host().lower()
-        cache_key = self.get_cache_key(host)
+        netloc = request.get_host().lower()
+        cache_key = self.get_cache_key(netloc)
 
         # Find the SITE_ID in the cache
         site_id = self.cache.get(cache_key)
@@ -114,9 +116,9 @@ class DynamicSiteMiddleware(object):
 
         # Cache missed
         try:
-            site = self.get_site(host)
+            site = self.get_site(netloc)
         except Site.DoesNotExist:
-            site = self.get_testserver_site(host)
+            site = self.get_testserver_site(netloc)
             if site is None:
                 # Fallback using settings.MULTISITE_FALLBACK
                 settings.SITE_ID.reset()
