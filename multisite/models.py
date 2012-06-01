@@ -141,13 +141,24 @@ class Alias(models.Model):
     Alias.
     """
 
+    domain = type(_site_domain)(
+        _('domain name'),
+        max_length=_site_domain.max_length,
+        unique=True,
+        help_text=_('Either "domain" or "domain:port"'),
+    )
     site = models.ForeignKey(Site, related_name='aliases')
-    domain = type(_site_domain)(_('domain name'),
-                                max_length=_site_domain.max_length,
-                                unique=True)
-    is_canonical = models.NullBooleanField(default=None, editable=False,
-                                           validators=[validate_true_or_none])
-    redirect_to_canonical = models.BooleanField(default=True)
+    is_canonical = models.NullBooleanField(
+        _('is canonical?'),
+        default=None, editable=False,
+        validators=[validate_true_or_none],
+        help_text=_('Does this domain name match the one in site?'),
+    )
+    redirect_to_canonical = models.BooleanField(
+        _('redirect to canonical?'),
+        default=True,
+        help_text=_('Should this domain name redirect to the one in site?'),
+    )
 
     objects = AliasManager()
     canonical = CanonicalAliasManager()

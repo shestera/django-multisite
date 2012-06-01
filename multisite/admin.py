@@ -1,6 +1,39 @@
 from django.contrib import admin
 from django.contrib.admin.views.main import ChangeList
 from django.contrib.sites.models import Site
+from django.contrib.sites.admin import SiteAdmin
+
+from .models import Alias
+
+
+class AliasAdmin(admin.ModelAdmin):
+    """Admin for Alias model."""
+    list_display = ('domain', 'site', 'is_canonical', 'redirect_to_canonical')
+    list_filter = ('is_canonical', 'redirect_to_canonical')
+    ordering = ('domain',)
+    raw_id_fields = ('site',)
+    readonly_fields = ('is_canonical',)
+    search_fields = ('domain',)
+
+admin.site.register(Alias, AliasAdmin)
+
+
+class AliasInline(admin.TabularInline):
+    """Inline for Alias model, showing non-canonical aliases."""
+    model = Alias
+    extra = 1
+    ordering = ('domain',)
+
+    def queryset(self, request):
+        """Returns only non-canonical aliases."""
+        qs = self.model.aliases.get_query_set()
+        ordering = self.ordering or ()
+        if ordering:
+            qs = qs.order_by(*ordering)
+        return qs
+
+# HACK: Monkeypatch AliasInline into SiteAdmin
+SiteAdmin.inlines = type(SiteAdmin.inlines)([AliasInline]) + SiteAdmin.inlines
 
 
 class MultisiteChangeList(ChangeList):
