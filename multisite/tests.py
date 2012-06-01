@@ -66,6 +66,29 @@ class DynamicSiteMiddlewareTest(TestCase):
     def tearDown(self):
         settings.SITE_ID.reset()
 
+    def test_expand_netloc(self):
+        _expand_netloc = self.middleware._expand_netloc
+        self.assertRaises(ValueError, _expand_netloc, '')
+        self.assertRaises(ValueError, _expand_netloc, ':8000')
+        self.assertEqual(_expand_netloc('testserver:8000'),
+                         ['testserver:8000', 'testserver',
+                          '*:8000', '*'])
+        self.assertEqual(_expand_netloc('testserver'),
+                         ['testserver', '*'])
+        self.assertEqual(_expand_netloc('example.com:8000'),
+                         ['example.com:8000', 'example.com',
+                          '*.com:8000', '*.com',
+                          '*:8000', '*'])
+        self.assertEqual(_expand_netloc('example.com'),
+                         ['example.com', '*.com', '*'])
+        self.assertEqual(_expand_netloc('www.example.com:8000'),
+                         ['www.example.com:8000', 'www.example.com',
+                          '*.example.com:8000', '*.example.com',
+                          '*.com:8000', '*.com',
+                          '*:8000', '*'])
+        self.assertEqual(_expand_netloc('www.example.com'),
+                         ['www.example.com', '*.example.com', '*.com', '*'])
+
     def test_valid_domain(self):
         # Make the request
         request = self.factory.get('/')
@@ -90,6 +113,24 @@ class DynamicSiteMiddlewareTest(TestCase):
         self.assertEqual(self.middleware.process_request(request), None)
         self.assertEqual(settings.SITE_ID, self.site.pk)
 
+    def test_wildcards(self):
+        # *.example.com
+        self.assertEqual(self.middleware.get_site('www.example.com'),
+                         None)
+        self.assertEqual(self.middleware.get_site('www.dev.example.com'),
+                         None)
+        Alias.objects.create(site=self.site, domain='*.example.com')
+        self.assertEqual(self.middleware.get_site('www.example.com'),
+                         self.site)
+        self.assertEqual(self.middleware.get_site('www.dev.example.com'),
+                         self.site)
+        # *
+        self.assertEqual(self.middleware.get_site('example.net'),
+                         None)
+        Alias.objects.create(site=self.site, domain='*')
+        self.assertEqual(self.middleware.get_site('example.net'),
+                         self.site)
+
     def test_change_domain(self):
         # Make the request
         request = self.factory.get('/')
@@ -101,15 +142,25 @@ class DynamicSiteMiddlewareTest(TestCase):
         self.assertEqual(self.middleware.process_request(request), None)
         self.assertEqual(settings.SITE_ID, site2.pk)
 
-    def test_invalid_domain(self):
-        # Make the request
-        request = self.factory.get('/', host='invalid')
+    def test_unknown_host(self):
+        # Unknown host
+        request = self.factory.get('/', host='unknown')
+        self.assertRaises(Http404,
+                          self.middleware.process_request, request)
+        self.assertEqual(settings.SITE_ID, 0)
+        # Unknown host:port
+        request = self.factory.get('/', host='unknown:8000')
         self.assertRaises(Http404,
                           self.middleware.process_request, request)
         self.assertEqual(settings.SITE_ID, 0)
 
-    def test_invalid_domain_port(self):
-        # Make the request
+    def test_invalid_host(self):
+        # Invalid host
+        request = self.factory.get('/', host='')
+        self.assertRaises(Http404,
+                          self.middleware.process_request, request)
+        self.assertEqual(settings.SITE_ID, 0)
+        # Invalid host:port
         request = self.factory.get('/', host=':8000')
         self.assertRaises(Http404,
                           self.middleware.process_request, request)

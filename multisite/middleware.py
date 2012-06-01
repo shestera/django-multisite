@@ -1,14 +1,20 @@
 # -*- coding: utf-8 -*-
 
+import operator
+
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core import mail
 from django.core.cache import get_cache
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.urlresolvers import get_callable
+from django.core.validators import validate_ipv4_address
+from django.db.models import Q
 from django.db.models.signals import pre_save, post_delete
 from django.http import Http404
 from django.utils.hashcompat import md5_constructor
+
+from .models import Alias
 
 
 class DynamicSiteMiddleware(object):
@@ -46,7 +52,7 @@ class DynamicSiteMiddleware(object):
 
     def get_site(self, netloc):
         """
-        Returns the Site that matches ``netloc``.
+        Returns the Site that best matches ``netloc``, or None.
 
         ``netloc`` can be a bare hostname ``'example.com'`` or a
         hostname with a port number``'example.com:8000'``.
@@ -58,15 +64,57 @@ class DynamicSiteMiddleware(object):
         All comparisons are done case-insensitively.
 
         """
+        domains = self._expand_netloc(netloc)
+        q = reduce(operator.or_, (Q(domain__iexact=d) for d in domains))
+        aliases = dict((a.domain, a) for a in Alias.objects.filter(q))
+        for domain in domains:
+            try:
+                return aliases[domain].site
+            except KeyError:
+                pass
+
+    @classmethod
+    def _expand_netloc(cls, netloc):
+        """
+        Returns a list of possible domain expansions for ``netloc``.
+
+        Expansions are ordered from highest to lowest preference and may
+        include wildcards. Examples::
+
+        >>> DynamicSiteMiddleware._expand_netloc('www.example.com')
+        ['www.example.com', '*.example.com', '*.com', '*']
+
+        >>> DynamicSiteMiddleware._expand_netloc('www.example.com:80')
+        ['www.example.com:80', 'www.example.com',
+         '*.example.com:80', '*.example.com',
+         '*.com:80', '*.com',
+         '*:80', '*']
+        """
+        if ':' in netloc:
+            host, port = netloc.rsplit(':', 1)
+        else:
+            host, port = netloc, None
+
+        if not host:
+            raise ValueError("Invalid netloc: %r" % netloc)
+
         try:
-            # Get by netloc
-            return Site.objects.get(domain__iexact=netloc)
-        except Site.DoesNotExist:
-            host = netloc.rsplit(':', 1)[0]
-            if host != netloc:
-                # Get by hostname without port
-                return Site.objects.get(domain__iexact=host)
-            raise
+            validate_ipv4_address(host)
+            bits = [host]
+        except ValidationError:
+            # Not an IP address
+            bits = host.split('.')
+
+        result = []
+        for i in xrange(0, (len(bits) + 1)):
+            if i == 0:
+                host = '.'.join(bits[i:])
+            else:
+                host = '.'.join(['*'] + bits[i:])
+            if port:
+                result.append(host + ':' + port)
+            result.append(host)
+        return result
 
     def fallback_view(self, request):
         """
@@ -111,19 +159,24 @@ class DynamicSiteMiddleware(object):
         # Find the SITE_ID in the cache
         site_id = self.cache.get(cache_key)
         if site_id is not None:
+            self.cache.set(cache_key, site_id)
             settings.SITE_ID.set(site_id)
             return
 
         # Cache missed
         try:
             site = self.get_site(netloc)
-        except Site.DoesNotExist:
+        except ValueError:
+            site = None
+        # Running under TestCase?
+        if site is None:
             site = self.get_testserver_site(netloc)
-            if site is None:
-                # Fallback using settings.MULTISITE_FALLBACK
-                settings.SITE_ID.reset()
-                return self.fallback_view(request)
+        # Fallback using settings.MULTISITE_FALLBACK
+        if site is None:
+            settings.SITE_ID.reset()
+            return self.fallback_view(request)
 
+        # Found Site
         self.cache.set(cache_key, site.pk)
         settings.SITE_ID.set(site.pk)
 
