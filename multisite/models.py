@@ -1,6 +1,10 @@
+import operator
+
 from django.contrib.sites.models import Site
 from django.core.exceptions import ValidationError
+from django.core.validators import validate_ipv4_address
 from django.db import connections, models, router
+from django.db.models import Q
 from django.db.models.signals import pre_save, post_save, post_syncdb
 from django.utils.translation import ugettext_lazy as _
 
@@ -13,6 +17,71 @@ class AliasManager(models.Manager):
 
     def get_query_set(self):
         return super(AliasManager, self).get_query_set().select_related('site')
+
+    def resolve(self, netloc):
+        """
+        Returns the Alias that best matches ``netloc``, or None.
+
+        ``netloc`` can be a bare hostname ``'example.com'`` or a
+        hostname with a port number``'example.com:8000'``.
+
+        Attempts to match by netloc with the port number first,
+        against Alias.domain. If that fails, it will try to match the
+        bare hostname with no port number.
+
+        All comparisons are done case-insensitively.
+        """
+        domains = self._expand_netloc(netloc)
+        q = reduce(operator.or_, (Q(domain__iexact=d) for d in domains))
+        aliases = dict((a.domain, a) for a in self.get_query_set().filter(q))
+        for domain in domains:
+            try:
+                return aliases[domain]
+            except KeyError:
+                pass
+
+    @classmethod
+    def _expand_netloc(cls, netloc):
+        """
+        Returns a list of possible domain expansions for ``netloc``.
+
+        Expansions are ordered from highest to lowest preference and may
+        include wildcards. Examples::
+
+        >>> AliasManager._expand_netloc('www.example.com')
+        ['www.example.com', '*.example.com', '*.com', '*']
+
+        >>> AliasManager._expand_netloc('www.example.com:80')
+        ['www.example.com:80', 'www.example.com',
+         '*.example.com:80', '*.example.com',
+         '*.com:80', '*.com',
+         '*:80', '*']
+        """
+        if ':' in netloc:
+            host, port = netloc.rsplit(':', 1)
+        else:
+            host, port = netloc, None
+
+        if not host:
+            raise ValueError("Invalid netloc: %r" % netloc)
+
+        try:
+            validate_ipv4_address(host)
+            bits = [host]
+        except ValidationError:
+            # Not an IP address
+            bits = host.split('.')
+
+        result = []
+        for i in xrange(0, (len(bits) + 1)):
+            if i == 0:
+                host = '.'.join(bits[i:])
+            else:
+                host = '.'.join(['*'] + bits[i:])
+            if port:
+                result.append(host + ':' + port)
+            result.append(host)
+        return result
 
 
 class CanonicalAliasManager(models.Manager):

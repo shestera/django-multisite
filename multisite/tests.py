@@ -66,29 +66,6 @@ class DynamicSiteMiddlewareTest(TestCase):
     def tearDown(self):
         settings.SITE_ID.reset()
 
-    def test_expand_netloc(self):
-        _expand_netloc = self.middleware._expand_netloc
-        self.assertRaises(ValueError, _expand_netloc, '')
-        self.assertRaises(ValueError, _expand_netloc, ':8000')
-        self.assertEqual(_expand_netloc('testserver:8000'),
-                         ['testserver:8000', 'testserver',
-                          '*:8000', '*'])
-        self.assertEqual(_expand_netloc('testserver'),
-                         ['testserver', '*'])
-        self.assertEqual(_expand_netloc('example.com:8000'),
-                         ['example.com:8000', 'example.com',
-                          '*.com:8000', '*.com',
-                          '*:8000', '*'])
-        self.assertEqual(_expand_netloc('example.com'),
-                         ['example.com', '*.com', '*'])
-        self.assertEqual(_expand_netloc('www.example.com:8000'),
-                         ['www.example.com:8000', 'www.example.com',
-                          '*.example.com:8000', '*.example.com',
-                          '*.com:8000', '*.com',
-                          '*:8000', '*'])
-        self.assertEqual(_expand_netloc('www.example.com'),
-                         ['www.example.com', '*.example.com', '*.com', '*'])
-
     def test_valid_domain(self):
         # Make the request
         request = self.factory.get('/')
@@ -112,24 +89,6 @@ class DynamicSiteMiddlewareTest(TestCase):
         request = self.factory.get('/', host=self.host.upper())
         self.assertEqual(self.middleware.process_request(request), None)
         self.assertEqual(settings.SITE_ID, self.site.pk)
-
-    def test_wildcards(self):
-        # *.example.com
-        self.assertEqual(self.middleware.get_site('www.example.com'),
-                         None)
-        self.assertEqual(self.middleware.get_site('www.dev.example.com'),
-                         None)
-        Alias.objects.create(site=self.site, domain='*.example.com')
-        self.assertEqual(self.middleware.get_site('www.example.com'),
-                         self.site)
-        self.assertEqual(self.middleware.get_site('www.dev.example.com'),
-                         self.site)
-        # *
-        self.assertEqual(self.middleware.get_site('example.net'),
-                         None)
-        Alias.objects.create(site=self.site, domain='*')
-        self.assertEqual(self.middleware.get_site('example.net'),
-                         self.site)
 
     def test_change_domain(self):
         # Make the request
@@ -594,3 +553,45 @@ class AliasTest(TestCase):
         # Delete Site
         site.delete()
         self.assertFalse(Alias.objects.filter(site=site).exists())
+
+    def test_expand_netloc(self):
+        _expand_netloc = Alias.objects._expand_netloc
+        self.assertRaises(ValueError, _expand_netloc, '')
+        self.assertRaises(ValueError, _expand_netloc, ':8000')
+        self.assertEqual(_expand_netloc('testserver:8000'),
+                         ['testserver:8000', 'testserver',
+                          '*:8000', '*'])
+        self.assertEqual(_expand_netloc('testserver'),
+                         ['testserver', '*'])
+        self.assertEqual(_expand_netloc('example.com:8000'),
+                         ['example.com:8000', 'example.com',
+                          '*.com:8000', '*.com',
+                          '*:8000', '*'])
+        self.assertEqual(_expand_netloc('example.com'),
+                         ['example.com', '*.com', '*'])
+        self.assertEqual(_expand_netloc('www.example.com:8000'),
+                         ['www.example.com:8000', 'www.example.com',
+                          '*.example.com:8000', '*.example.com',
+                          '*.com:8000', '*.com',
+                          '*:8000', '*'])
+        self.assertEqual(_expand_netloc('www.example.com'),
+                         ['www.example.com', '*.example.com', '*.com', '*'])
+
+    def test_resolve(self):
+        site = Site.objects.create(domain='example.com')
+        # *.example.com
+        self.assertEqual(Alias.objects.resolve('www.example.com'),
+                         None)
+        self.assertEqual(Alias.objects.resolve('www.dev.example.com'),
+                         None)
+        alias = Alias.objects.create(site=site, domain='*.example.com')
+        self.assertEqual(Alias.objects.resolve('www.example.com'),
+                         alias)
+        self.assertEqual(Alias.objects.resolve('www.dev.example.com'),
+                         alias)
+        # *
+        self.assertEqual(Alias.objects.resolve('example.net'),
+                         None)
+        alias = Alias.objects.create(site=site, domain='*')
+        self.assertEqual(Alias.objects.resolve('example.net'),
+                         alias)

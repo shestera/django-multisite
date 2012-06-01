@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import operator
-
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core import mail
 from django.core.cache import get_cache
-from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.core.exceptions import ImproperlyConfigured
 from django.core.urlresolvers import get_callable
-from django.core.validators import validate_ipv4_address
-from django.db.models import Q
 from django.db.models.signals import pre_save, post_delete
 from django.http import Http404
 from django.utils.hashcompat import md5_constructor
@@ -49,72 +45,6 @@ class DynamicSiteMiddleware(object):
             except ValueError:
                 # Fallback to the first Site object
                 return Site.objects.order_by('pk')[0]
-
-    def get_site(self, netloc):
-        """
-        Returns the Site that best matches ``netloc``, or None.
-
-        ``netloc`` can be a bare hostname ``'example.com'`` or a
-        hostname with a port number``'example.com:8000'``.
-
-        Attempts to match by netloc with the port number first,
-        against the domain field in Site. If that fails, it will try
-        to match the bare hostname with no port number.
-
-        All comparisons are done case-insensitively.
-
-        """
-        domains = self._expand_netloc(netloc)
-        q = reduce(operator.or_, (Q(domain__iexact=d) for d in domains))
-        aliases = dict((a.domain, a) for a in Alias.objects.filter(q))
-        for domain in domains:
-            try:
-                return aliases[domain].site
-            except KeyError:
-                pass
-
-    @classmethod
-    def _expand_netloc(cls, netloc):
-        """
-        Returns a list of possible domain expansions for ``netloc``.
-
-        Expansions are ordered from highest to lowest preference and may
-        include wildcards. Examples::
-
-        >>> DynamicSiteMiddleware._expand_netloc('www.example.com')
-        ['www.example.com', '*.example.com', '*.com', '*']
-
-        >>> DynamicSiteMiddleware._expand_netloc('www.example.com:80')
-        ['www.example.com:80', 'www.example.com',
-         '*.example.com:80', '*.example.com',
-         '*.com:80', '*.com',
-         '*:80', '*']
-        """
-        if ':' in netloc:
-            host, port = netloc.rsplit(':', 1)
-        else:
-            host, port = netloc, None
-
-        if not host:
-            raise ValueError("Invalid netloc: %r" % netloc)
-
-        try:
-            validate_ipv4_address(host)
-            bits = [host]
-        except ValidationError:
-            # Not an IP address
-            bits = host.split('.')
-
-        result = []
-        for i in xrange(0, (len(bits) + 1)):
-            if i == 0:
-                host = '.'.join(bits[i:])
-            else:
-                host = '.'.join(['*'] + bits[i:])
-            if port:
-                result.append(host + ':' + port)
-            result.append(host)
-        return result
 
     def fallback_view(self, request):
         """
@@ -164,10 +94,13 @@ class DynamicSiteMiddleware(object):
             return
 
         # Cache missed
+        site = None
         try:
-            site = self.get_site(netloc)
+            alias = Alias.objects.resolve(netloc)
+            if alias:
+                site = alias.site
         except ValueError:
-            site = None
+            pass
         # Running under TestCase?
         if site is None:
             site = self.get_testserver_site(netloc)
