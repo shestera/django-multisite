@@ -45,11 +45,22 @@ class DynamicSiteMiddleware(object):
         else:
             return netloc, None
 
-    def get_testserver_alias(self, netloc):
+    def get_development_alias(self, netloc):
         """
-        Returns valid Alias when running Django tests. Otherwise, returns None.
+        Returns valid Alias when in development mode. Otherwise, returns None.
+
+        Development mode is either:
+        - Running tests, i.e. manage.py test
+        - Running locally in settings.DEBUG = True, where the hostname is
+          a top-level name, i.e. localhost
         """
-        if hasattr(mail, 'outbox') and netloc == 'testserver':
+        # When running tests, django.core.mail.outbox exists and
+        # netloc == 'testserver'
+        is_testserver = (hasattr(mail, 'outbox') and netloc == 'testserver')
+        # When using runserver, assume that host will only have one path
+        # component. This covers 'localhost' and your machine name.
+        is_local_debug = (settings.DEBUG and len(netloc.split('.')) == 1)
+        if is_testserver or is_local_debug:
             try:
                 # Prefer the default SITE_ID
                 site_id = settings.SITE_ID.get_default()
@@ -70,8 +81,8 @@ class DynamicSiteMiddleware(object):
             alias = None
 
         if alias is None:
-            # Running under TestCase?
-            return self.get_testserver_alias(netloc)
+            # Running under TestCase or runserver?
+            return self.get_development_alias(netloc)
         return alias
 
     def fallback_view(self, request):
