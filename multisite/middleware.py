@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from urlparse import urlsplit, urlunsplit
 
 from django.conf import settings
 from django.contrib.sites.models import Site
@@ -7,7 +8,7 @@ from django.core.cache import get_cache
 from django.core.exceptions import ImproperlyConfigured
 from django.core.urlresolvers import get_callable
 from django.db.models.signals import pre_save, post_delete
-from django.http import Http404
+from django.http import Http404, HttpResponsePermanentRedirect
 from django.utils.hashcompat import md5_constructor
 
 from .models import Alias
@@ -30,21 +31,48 @@ class DynamicSiteMiddleware(object):
     def get_cache_key(self, netloc):
         """Returns a cache key based on ``netloc``."""
         netloc = md5_constructor(netloc)
-        return 'multisite.site_id.%s.%s' % (self.key_prefix,
-                                            netloc.hexdigest())
+        return 'multisite.alias.%s.%s' % (self.key_prefix,
+                                          netloc.hexdigest())
 
-    def get_testserver_site(self, netloc):
+    def netloc_parse(self, netloc):
         """
-        Returns valid Site when running Django tests. Otherwise, returns None.
+        Returns ``(host, port)`` for ``netloc`` of the form ``'host:port'``.
+
+        If netloc does not have a port number, ``port`` will be None.
+        """
+        if ':' in netloc:
+            return netloc.rsplit(':', 1)
+        else:
+            return netloc, None
+
+    def get_testserver_alias(self, netloc):
+        """
+        Returns valid Alias when running Django tests. Otherwise, returns None.
         """
         if hasattr(mail, 'outbox') and netloc == 'testserver':
             try:
                 # Prefer the default SITE_ID
                 site_id = settings.SITE_ID.get_default()
-                return Site.objects.get(pk=site_id)
+                return Alias.canonical.get(site=site_id)
             except ValueError:
                 # Fallback to the first Site object
-                return Site.objects.order_by('pk')[0]
+                return Alias.canonical.order_by('site')[0]
+
+    def get_alias(self, netloc):
+        """
+        Returns Alias matching ``netloc``. Otherwise, returns None.
+        """
+        host, port = self.netloc_parse(netloc)
+
+        try:
+            alias = Alias.objects.resolve(host=host, port=port)
+        except ValueError:
+            alias = None
+
+        if alias is None:
+            # Running under TestCase?
+            return self.get_testserver_alias(netloc)
+        return alias
 
     def fallback_view(self, request):
         """
@@ -82,41 +110,38 @@ class DynamicSiteMiddleware(object):
         # View function
         return view(request, **kwargs)
 
+    def redirect_to_canonical(self, request, alias):
+        if not alias.redirect_to_canonical or alias.is_canonical:
+            return
+        url = urlsplit(request.build_absolute_uri(request.get_full_path()))
+        url = urlunsplit((url.scheme,
+                          alias.site.domain,
+                          url.path, url.query, url.fragment))
+        return HttpResponsePermanentRedirect(url)
+
     def process_request(self, request):
         netloc = request.get_host().lower()
         cache_key = self.get_cache_key(netloc)
 
-        # Find the SITE_ID in the cache
-        site_id = self.cache.get(cache_key)
-        if site_id is not None:
-            self.cache.set(cache_key, site_id)
-            settings.SITE_ID.set(site_id)
-            return
-
-        if ':' in netloc:
-            host, port = netloc.rsplit(':', 1)
-        else:
-            host, port = netloc, None
+        # Find the Alias in the cache
+        alias = self.cache.get(cache_key)
+        if alias is not None:
+            self.cache.set(cache_key, alias)
+            settings.SITE_ID.set(alias.site_id)
+            return self.redirect_to_canonical(request, alias)
 
         # Cache missed
-        site = None
-        try:
-            alias = Alias.objects.resolve(host=host, port=port)
-            if alias:
-                site = alias.site
-        except ValueError:
-            pass
-        # Running under TestCase?
-        if site is None:
-            site = self.get_testserver_site(netloc)
+        alias = self.get_alias(netloc)
+
         # Fallback using settings.MULTISITE_FALLBACK
-        if site is None:
+        if alias is None:
             settings.SITE_ID.reset()
             return self.fallback_view(request)
 
         # Found Site
-        self.cache.set(cache_key, site.pk)
-        settings.SITE_ID.set(site.pk)
+        self.cache.set(cache_key, alias)
+        settings.SITE_ID.set(alias.site_id)
+        return self.redirect_to_canonical(request, alias)
 
     def site_domain_changed_hook(self, sender, instance, raw, *args, **kwargs):
         """Clears the cache if Site.domain has changed."""

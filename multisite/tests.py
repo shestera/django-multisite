@@ -134,6 +134,26 @@ class DynamicSiteMiddlewareTest(TestCase):
                           self.middleware.process_request, request)
         self.assertEqual(settings.SITE_ID, 0)
 
+    def test_redirect(self):
+        host = 'example.org'
+        alias = Alias.objects.create(site=self.site, domain=host)
+        self.assertTrue(alias.redirect_to_canonical)
+        # Make the request
+        request = self.factory.get('/path', host=host)
+        response = self.middleware.process_request(request)
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response['Location'],
+                         "http://%s/path" % self.host)
+
+    def test_no_redirect(self):
+        host = 'example.org'
+        Alias.objects.create(site=self.site, domain=host,
+                             redirect_to_canonical=False)
+        # Make the request
+        request = self.factory.get('/path', host=host)
+        self.assertEqual(self.middleware.process_request(request), None)
+        self.assertEqual(settings.SITE_ID, self.site.pk)
+
 
 @skipUnless(Site._meta.installed,
             'django.contrib.sites is not in settings.INSTALLED_APPS')
@@ -247,7 +267,8 @@ class CacheTest(TestCase):
         # Make the request
         request = self.factory.get('/')
         self.assertEqual(self.middleware.process_request(request), None)
-        self.assertEqual(self.middleware.cache.get(cache_key), self.site.pk)
+        self.assertEqual(self.middleware.cache.get(cache_key).site_id,
+                         self.site.pk)
         # Change the domain name
         self.site.domain = 'example.org'
         self.site.save()
