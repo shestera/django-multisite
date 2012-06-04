@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*
 
+from contextlib import contextmanager
 from warnings import warn
 
 try:
@@ -88,6 +89,20 @@ class SiteID(local):
 
     def __hash__(self):
         return self.__int__()
+
+    @contextmanager
+    def override(self, value):
+        """
+        Overrides SITE_ID temporarily::
+
+           >>> with settings.SITE_ID.override(2):
+           ...    print settings.SITE_ID
+           2
+        """
+        site_id = self.site_id
+        self.set(value)
+        yield self
+        self.site_id = site_id
 
     def set(self, value):
         from django.db.models import Model

@@ -344,6 +344,15 @@ class TestSiteID(TestCase):
         self.assertEqual(str(self.site_id), '10')
         self.assertEqual(repr(self.site_id), '10')
 
+    def test_context_manager(self):
+        self.assertEqual(self.site_id.site_id, None)
+        with self.site_id.override(1):
+            self.assertEqual(self.site_id.site_id, 1)
+            with self.site_id.override(2):
+                self.assertEqual(self.site_id.site_id, 2)
+            self.assertEqual(self.site_id.site_id, 1)
+        self.assertEqual(self.site_id.site_id, None)
+
 
 @skipUnless(Site._meta.installed,
             'django.contrib.sites is not in settings.INSTALLED_APPS')
