@@ -7,4 +7,5 @@ dist
 downloads
 eggs
 parts
+MANIFEST
 multisite/*.egg-info
