@@ -8,8 +8,11 @@ from django.db.models import Q
 from django.db.models.signals import pre_save, post_save, post_syncdb
 from django.utils.translation import ugettext_lazy as _
 
+from .hacks import use_framework_for_site_cache
 
 _site_domain = Site._meta.get_field('domain')
+
+use_framework_for_site_cache()
 
 
 class AliasManager(models.Manager):
