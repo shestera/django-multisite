@@ -1,4 +1,5 @@
 import sys
+from warnings import warn
 
 from django.conf import settings
 from django.db.models.signals import post_save, post_delete
@@ -44,7 +45,23 @@ class SiteCache(object):
         if cache is None:
             cache_alias = getattr(settings, 'CACHE_SITES_ALIAS', 'default')
             cache = get_cache(cache_alias, KEY_PREFIX=self.key_prefix)
+            self._warn_cache_backend(cache, cache_alias)
         self._cache = cache
+
+    def _warn_cache_backend(self, cache, cache_alias):
+        from django.core.cache.backends.dummy import DummyCache
+        from django.core.cache.backends.db import DatabaseCache
+        from django.core.cache.backends.filebased import FileBasedCache
+        from django.core.cache.backends.locmem import LocMemCache
+
+        if isinstance(cache, (LocMemCache, FileBasedCache)):
+            warn(("'%s' cache is %s, which may cause stale caches." %
+                  (cache_alias, type(cache).__name__)),
+                 RuntimeWarning, stacklevel=3)
+        elif isinstance(cache, (DatabaseCache, DummyCache)):
+            warn(("'%s' is %s, causing extra database queries." %
+                  (cache_alias, type(cache).__name__)),
+                 RuntimeWarning, stacklevel=3)
 
     def _get_cache_key(self, key):
         return 'sites.%s.%s' % (self.key_prefix, key)
