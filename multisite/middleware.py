@@ -24,7 +24,7 @@ class DynamicSiteMiddleware(object):
                                    'default')
         self.key_prefix = getattr(settings, 'CACHE_MULTISITE_KEY_PREFIX',
                                   '')
-        self.cache = get_cache(self.cache_alias)
+        self.cache = get_cache(self.cache_alias, KEY_PREFIX=self.key_prefix)
         pre_save.connect(self.site_domain_changed_hook, sender=Site)
         post_delete.connect(self.site_deleted_hook, sender=Site)
 
