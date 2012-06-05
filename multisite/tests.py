@@ -280,6 +280,57 @@ class CacheTest(TestCase):
         self.assertEqual(settings.SITE_ID, 0)
 
 
+@skipUnless(Site._meta.installed,
+            'django.contrib.sites is not in settings.INSTALLED_APPS')
+@override_settings(
+    SITE_ID=SiteID(),
+    CACHE_SITES_ALIAS='django.core.cache.backends.locmem.LocMemCache',
+    CACHE_SITES_KEY_PREFIX='',
+)
+class SiteCacheTest(TestCase):
+    def setUp(self):
+        from django.contrib.sites import models
+        Site.objects.all().delete()
+        self.host = 'example.com'
+        self.site = Site.objects.create(domain=self.host)
+        self.cache = models.SITE_CACHE
+        settings.SITE_ID.set(self.site.id)
+
+    def test_get_current(self):
+        self.assertRaises(KeyError, self.cache.__getitem__, self.site.id)
+        # Populate cache
+        self.assertEqual(Site.objects.get_current(), self.site)
+        self.assertEqual(self.cache[self.site.id], self.site)
+        # Clear cache
+        self.cache.clear()
+        self.assertRaises(KeyError, self.cache.__getitem__, self.site.id)
+
+    def test_create_site(self):
+        self.assertEqual(Site.objects.get_current(), self.site)
+        self.assertEqual(Site.objects.get_current().domain, self.site.domain)
+        # Create new site
+        site = Site.objects.create(domain='example.org')
+        settings.SITE_ID.set(site.id)
+        self.assertEqual(Site.objects.get_current(), site)
+        self.assertEqual(Site.objects.get_current().domain, site.domain)
+
+    def test_change_site(self):
+        self.assertEqual(Site.objects.get_current(), self.site)
+        self.assertEqual(Site.objects.get_current().domain, self.site.domain)
+        # Change site domain
+        self.site.domain = 'example.org'
+        self.site.save()
+        self.assertEqual(Site.objects.get_current(), self.site)
+        self.assertEqual(Site.objects.get_current().domain, self.site.domain)
+
+    def test_delete_site(self):
+        self.assertEqual(Site.objects.get_current(), self.site)
+        self.assertEqual(Site.objects.get_current().domain, self.site.domain)
+        # Delete site
+        self.site.delete()
+        self.assertRaises(KeyError, self.cache.__getitem__, self.site.id)
+
+
 class TestSiteID(TestCase):
     def setUp(self):
         Site.objects.all().delete()

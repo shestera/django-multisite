@@ -1,17 +1,27 @@
 import sys
 
 from django.conf import settings
+from django.db.models.signals import post_save, post_delete
 
 
 def use_framework_for_site_cache():
     """Patches sites app to use the caching framework instead of a dict."""
+    # This patch has to exist because SITE_CACHE is normally a dict,
+    # which is local only to the process. When running multiple
+    # processes, a change to a Site will not be reflected across other
+    # ones.
     from django.contrib.sites import models
 
     # Patch the SITE_CACHE
-    models.SITE_CACHE = DictCache(SiteCache())
+    site_cache = SiteCache()
+    models.SITE_CACHE = DictCache(site_cache)
 
     # Patch the SiteManager class
     models.SiteManager.clear_cache = SiteManager_clear_cache
+
+    # Hooks to update SiteCache
+    post_save.connect(site_cache._site_changed_hook, sender=models.Site)
+    post_delete.connect(site_cache._site_deleted_hook, sender=models.Site)
 
 
 # Override SiteManager.clear_cache so it doesn't clobber SITE_CACHE
@@ -39,11 +49,17 @@ class SiteCache(object):
     def _get_cache_key(self, key):
         return 'sites.%s.%s' % (self.key_prefix, key)
 
+    def _clean_site(self, site):
+        # Force site.id to be an int, not a SiteID object.
+        site.id = int(site.id)
+        return site
+
     def get(self, key, *args, **kwargs):
         return self._cache.get(key=self._get_cache_key(key), *args, **kwargs)
 
     def set(self, key, value, *args, **kwargs):
-        self._cache.set(key=self._get_cache_key(key), value=value,
+        self._cache.set(key=self._get_cache_key(key),
+                        value=self._clean_site(value),
                         *args, **kwargs)
 
     def delete(self, key, *args, **kwargs):
@@ -55,6 +71,14 @@ class SiteCache(object):
 
     def clear(self, *args, **kwargs):
         self._cache.clear(*args, **kwargs)
+
+    def _site_changed_hook(self, sender, instance, raw, *args, **kwargs):
+        if raw:
+            return
+        self.set(key=instance.pk, value=instance)
+
+    def _site_deleted_hook(self, sender, instance, *args, **kwargs):
+        self.delete(key=instance.pk)
 
 
 class DictCache(object):
