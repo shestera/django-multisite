@@ -38,9 +38,7 @@ class SiteCache(object):
     def __init__(self, cache=None, key_prefix=None):
         from django.core.cache import get_cache
 
-        if key_prefix is None:
-            key_prefix = getattr(settings, 'CACHE_SITES_KEY_PREFIX', '')
-        self.key_prefix = key_prefix
+        self._key_prefix = key_prefix
 
         if cache is None:
             cache_alias = getattr(settings, 'CACHE_SITES_ALIAS', 'default')
@@ -70,6 +68,12 @@ class SiteCache(object):
         # Force site.id to be an int, not a SiteID object.
         site.id = int(site.id)
         return site
+
+    @property
+    def key_prefix(self):
+        if self._key_prefix is None:
+            return getattr(settings, 'CACHE_SITES_KEY_PREFIX', '')
+        return self._key_prefix
 
     def get(self, key, *args, **kwargs):
         return self._cache.get(key=self._get_cache_key(key), *args, **kwargs)

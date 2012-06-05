@@ -33,7 +33,10 @@ class RequestFactory(DjangoRequestFactory):
 
 @skipUnless(Site._meta.installed,
             'django.contrib.sites is not in settings.INSTALLED_APPS')
-@override_settings(SITE_ID=SiteID())
+@override_settings(
+    SITE_ID=SiteID(),
+    CACHE_SITES_KEY_PREFIX='__test__',
+)
 class TestContribSite(TestCase):
     def setUp(self):
         Site.objects.all().delete()
@@ -284,8 +287,7 @@ class CacheTest(TestCase):
             'django.contrib.sites is not in settings.INSTALLED_APPS')
 @override_settings(
     SITE_ID=SiteID(),
-    CACHE_SITES_ALIAS='django.core.cache.backends.locmem.LocMemCache',
-    CACHE_SITES_KEY_PREFIX='',
+    CACHE_SITES_KEY_PREFIX='__test__',
 )
 class SiteCacheTest(TestCase):
     def setUp(self):
