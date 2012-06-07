@@ -123,8 +123,8 @@ class SiteID(local):
 class SiteDomain(SiteID):
     def __init__(self, default, *args, **kwargs):
         """
-        ``default``, if specified, is the default domain name, resolved
-        to SITE_ID, if that is unset.
+        ``default`` is the default domain name, resolved to SITE_ID, if
+        that is unset.
         """
         if not isinstance(default, basestring):
             raise ValueError("%r is not a valid default domain." % default)
