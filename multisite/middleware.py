@@ -56,7 +56,8 @@ class DynamicSiteMiddleware(object):
         """
         # When running tests, django.core.mail.outbox exists and
         # netloc == 'testserver'
-        is_testserver = (hasattr(mail, 'outbox') and netloc == 'testserver')
+        is_testserver = (hasattr(mail, 'outbox') and
+                         netloc in ('testserver', 'adminsite.com'))
         # When using runserver, assume that host will only have one path
         # component. This covers 'localhost' and your machine name.
         is_local_debug = (settings.DEBUG and len(netloc.split('.')) == 1)
