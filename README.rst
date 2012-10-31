@@ -3,7 +3,7 @@ README
 
 Get the code via git::
 
-    git clone git://github.com/plazix/django-multisite.git django-multisite
+    git clone git://github.com/ecometrica/django-multisite.git django-multisite
 
 Add the django-multisite/multisite folder to your PYTHONPATH.
 
