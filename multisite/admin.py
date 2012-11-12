@@ -3,6 +3,7 @@ from django.contrib.admin.views.main import ChangeList
 from django.contrib.sites.models import Site
 from django.contrib.sites.admin import SiteAdmin
 
+from .forms import SiteForm
 from .models import Alias
 
 
