@@ -35,6 +35,9 @@ class AliasInline(admin.TabularInline):
 # HACK: Monkeypatch AliasInline into SiteAdmin
 SiteAdmin.inlines = type(SiteAdmin.inlines)([AliasInline]) + SiteAdmin.inlines
 
+# HACK: Monkeypatch Alias validation into SiteForm
+SiteAdmin.form = SiteForm
+
 
 class MultisiteChangeList(ChangeList):
     """
