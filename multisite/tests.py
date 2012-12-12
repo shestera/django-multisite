@@ -2,7 +2,8 @@ import warnings
 
 from django.conf import settings
 from django.contrib.sites.models import Site
-from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.core.exceptions import (ImproperlyConfigured, SuspiciousOperation,
+                                    ValidationError)
 from django.http import Http404
 from django.test import TestCase
 from django.test.client import RequestFactory as DjangoRequestFactory
@@ -119,12 +120,12 @@ class DynamicSiteMiddlewareTest(TestCase):
     def test_invalid_host(self):
         # Invalid host
         request = self.factory.get('/', host='')
-        self.assertRaises(Http404,
+        self.assertRaises(SuspiciousOperation,
                           self.middleware.process_request, request)
         self.assertEqual(settings.SITE_ID, 0)
         # Invalid host:port
         request = self.factory.get('/', host=':8000')
-        self.assertRaises(Http404,
+        self.assertRaises(SuspiciousOperation,
                           self.middleware.process_request, request)
         self.assertEqual(settings.SITE_ID, 0)
 
