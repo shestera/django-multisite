@@ -3,15 +3,39 @@ from django.utils._os import safe_join
 import os.path
 from django.contrib.sites.models import Site
 from django.conf import settings
+from django.template.loaders.app_directories import *
+
 
 def get_template_sources(template_name, template_dirs=None):
     template_dir = os.path.join(settings.TEMPLATE_DIRS[0], Site.objects.get_current().domain)
-    try:
-        yield safe_join(template_dir, template_name)
-    except UnicodeDecodeError:
-        raise
-    except ValueError:
-        pass
+
+    if not template_dirs:
+        
+        template_dirs = app_template_dirs
+        for template_dir in template_dirs:
+            try:
+                host = Site.objects.get_current().domain
+                
+                # template directories shouldn't need to include port number 
+                # so remove the port from the sites domain name for the search path.
+                try:
+                    host = host.rsplit(":")[0]
+                except:
+                    pass
+                
+                    
+                template_dir = os.path.join(template_dir, host)
+                yield safe_join(template_dir, template_name)
+                
+            except UnicodeDecodeError:
+                # The template dir name was a bytestring that wasn't valid UTF-8.
+                raise
+                
+            except ValueError:
+                # The joined path was located outside of template_dir.
+                
+                pass
+                
 
 def load_template_source(template_name, template_dirs=None):
     tried = []

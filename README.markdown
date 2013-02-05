@@ -1,7 +1,7 @@
 README
 ======
 
-Get the code via svn:
+Get the code via git:
 
     git clone git://github.com/shestera/django-multisite.git django-multisite
 
