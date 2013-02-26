@@ -2,12 +2,12 @@
 from urlparse import urlsplit, urlunsplit
 
 from django.conf import settings
-from django.contrib.sites.models import Site
+from django.contrib.sites.models import Site, SITE_CACHE
 from django.core import mail
 from django.core.cache import get_cache
 from django.core.exceptions import ImproperlyConfigured
 from django.core.urlresolvers import get_callable
-from django.db.models.signals import pre_save, post_delete
+from django.db.models.signals import pre_save, post_delete, post_init
 from django.http import Http404, HttpResponsePermanentRedirect
 from django.utils.hashcompat import md5_constructor
 
@@ -25,6 +25,8 @@ class DynamicSiteMiddleware(object):
         self.key_prefix = getattr(settings, 'CACHE_MULTISITE_KEY_PREFIX',
                                   '')
         self.cache = get_cache(self.cache_alias, KEY_PREFIX=self.key_prefix)
+        post_init.connect(self.site_domain_cache_hook, sender=Site,
+                          dispatch_uid='multisite_post_init')
         pre_save.connect(self.site_domain_changed_hook, sender=Site)
         post_delete.connect(self.site_deleted_hook, sender=Site)
 
@@ -153,18 +155,22 @@ class DynamicSiteMiddleware(object):
         # Found Site
         self.cache.set(cache_key, alias)
         settings.SITE_ID.set(alias.site_id)
+        SITE_CACHE[settings.SITE_ID] = alias.site  # Pre-populate SITE_CACHE
         return self.redirect_to_canonical(request, alias)
+
+    @classmethod
+    def site_domain_cache_hook(self, sender, instance, *args, **kwargs):
+        """Caches Site.domain in the object for site_domain_changed_hook."""
+        instance._domain_cache = instance.domain
 
     def site_domain_changed_hook(self, sender, instance, raw, *args, **kwargs):
         """Clears the cache if Site.domain has changed."""
-        if raw:
+        if raw or instance.pk is None:
             return
-        try:
-            original = sender.objects.get(pk=instance.pk)
-            if original.domain != instance.domain:
-                self.cache.clear()
-        except sender.DoesNotExist:
-            pass
+
+        original = getattr(instance, '_domain_cache', None)
+        if original != instance.domain:
+            self.cache.clear()
 
     def site_deleted_hook(self, *args, **kwargs):
         """Clears the cache if Site was deleted."""
