@@ -11,7 +11,7 @@ def long_description():
 
 
 setup(name='django-multisite',
-      version='0.2.4',
+      version='0.3.0',
       description='Serve multiple sites from a single Django application',
       long_description=long_description(),
       author='Leonid S Shestera',
@@ -21,7 +21,8 @@ setup(name='django-multisite',
       url='http://github.com/ecometrica/django-multisite',
       packages=['multisite',
                 'multisite.migrations'],
-      install_requires=['Django>=1.3'],
+      install_requires=['Django>=1.3',
+                        'tldextract>=1.1.3'],
       classifiers=['Development Status :: 4 - Beta',
                    'Environment :: Web Environment',
                    'Framework :: Django',

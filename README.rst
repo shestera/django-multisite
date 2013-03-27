@@ -7,6 +7,10 @@ Get the code via git::
 
 Add the django-multisite/multisite folder to your PYTHONPATH.
 
+
+Quickstart
+----------
+
 Replace your SITE_ID in settings.py to::
 
     from multisite import SiteID
@@ -52,6 +56,10 @@ If you have set CACHE\_MULTISITE\_ALIAS to a custom value, *e.g.*
         },
     }
 
+
+Domain fallbacks
+----------------
+
 By default, if the domain name is unknown, multisite will respond with
 an HTTP 404 Not Found error. To change this behaviour, add to
 settings.py::
@@ -71,3 +79,38 @@ Create a directory settings.TEMPLATE_DIRS directory with the names of
 domains, such as::
 
     mkdir templates/example.com
+
+
+Cross-domain cookies
+--------------------
+
+*New in version 0.3.0.*
+
+In order to support `cross-domain cookies`_,
+for purposes like single-sign-on,
+prepend the following to the top of
+settings.py MIDDLEWARE_CLASSES::
+
+    MIDDLEWARE_CLASSES = (
+        'multisite.middleware.CookieDomainMiddleware',
+        ...
+    )
+
+CookieDomainMiddleware will consult the `Public Suffix List`_
+for effective top-level domains.
+It caches this file
+in the system's default temporary directory
+as ``effective_tld_names.dat``.
+To change this in settings.py::
+
+    MULTISITE_PUBLIC_SUFFIX_LIST_CACHE = '/path/to/multisite_tld.da't
+
+By default,
+any cookies without a domain set
+will be reset to allow \*.domain.tld.
+To change this in settings.py::
+
+    MULTISITE_COOKIE_DOMAIN_DEPTH = 1  # Allow only *.subdomain.domain.tld
+
+.. _cross-domain cookies: http://en.wikipedia.org/wiki/HTTP_cookie#Domain_and_Path
+.. _Public Suffix List: http://publicsuffix.org/

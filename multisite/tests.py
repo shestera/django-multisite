@@ -1,10 +1,12 @@
+import os
+import tempfile
 import warnings
 
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core.exceptions import (ImproperlyConfigured, SuspiciousOperation,
                                     ValidationError)
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.test import TestCase
 from django.test.client import RequestFactory as DjangoRequestFactory
 from django.utils.unittest import skipUnless
@@ -15,7 +17,7 @@ except ImportError:
     from override_settings import override_settings
 
 from . import SiteDomain, SiteID, threadlocals
-from .middleware import DynamicSiteMiddleware
+from .middleware import CookieDomainMiddleware, DynamicSiteMiddleware
 from .models import Alias
 from .threadlocals import SiteIDHook
 
@@ -679,3 +681,128 @@ class AliasTest(TestCase):
         alias = Alias.objects.create(site=site, domain='*')
         self.assertEqual(Alias.objects.resolve('example.net'),
                          alias)
+
+
+@override_settings(
+    MULTISITE_COOKIE_DOMAIN_DEPTH=0,
+    MULTISITE_PUBLIC_SUFFIX_LIST_CACHE=None,
+)
+class TestCookieDomainMiddleware(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory(host='example.com')
+        self.middleware = CookieDomainMiddleware()
+
+    def test_init(self):
+        self.assertEqual(self.middleware.depth, 0)
+        self.assertEqual(self.middleware.psl_cache,
+                         os.path.join(tempfile.gettempdir(),
+                                      'multisite_tld.dat'))
+
+        with override_settings(MULTISITE_COOKIE_DOMAIN_DEPTH=1,
+                               MULTISITE_PUBLIC_SUFFIX_LIST_CACHE='/var/psl'):
+            middleware = CookieDomainMiddleware()
+            self.assertEqual(middleware.depth, 1)
+            self.assertEqual(middleware.psl_cache, '/var/psl')
+
+        with override_settings(MULTISITE_COOKIE_DOMAIN_DEPTH=-1):
+            self.assertRaises(ValueError, CookieDomainMiddleware)
+
+        with override_settings(MULTISITE_COOKIE_DOMAIN_DEPTH='invalid'):
+            self.assertRaises(ValueError, CookieDomainMiddleware)
+
+    def test_no_matched_cookies(self):
+        # No cookies
+        request = self.factory.get('/')
+        response = HttpResponse()
+        self.assertEqual(self.middleware.match_cookies(request, response),
+                         [])
+        cookies = self.middleware.process_response(request, response).cookies
+        self.assertEqual(cookies.values(), [])
+
+        # Add some cookies with their domains already set
+        response.set_cookie(key='a', value='a', domain='.example.org')
+        response.set_cookie(key='b', value='b', domain='.example.co.uk')
+        self.assertEqual(self.middleware.match_cookies(request, response),
+                         [])
+        cookies = self.middleware.process_response(request, response).cookies
+        self.assertEqual(cookies.values(), [cookies['a'], cookies['b']])
+        self.assertEqual(cookies['a']['domain'], '.example.org')
+        self.assertEqual(cookies['b']['domain'], '.example.co.uk')
+
+    def test_matched_cookies(self):
+        request = self.factory.get('/')
+        response = HttpResponse()
+        response.set_cookie(key='a', value='a', domain=None)
+        self.assertEqual(self.middleware.match_cookies(request, response),
+                         [response.cookies['a']])
+        # No new cookies should be introduced
+        cookies = self.middleware.process_response(request, response).cookies
+        self.assertEqual(cookies.values(), [cookies['a']])
+
+    def test_ip_address(self):
+        response = HttpResponse()
+        response.set_cookie(key='a', value='a', domain=None)
+        # IP addresses should not be mutated
+        request = self.factory.get('/', host='192.0.43.10')
+        cookies = self.middleware.process_response(request, response).cookies
+        self.assertEqual(cookies['a']['domain'], '')
+
+    def test_localpath(self):
+        response = HttpResponse()
+        response.set_cookie(key='a', value='a', domain=None)
+        # Local domains should not be mutated
+        request = self.factory.get('/', host='localhost')
+        cookies = self.middleware.process_response(request, response).cookies
+        self.assertEqual(cookies['a']['domain'], '')
+        # Even local subdomains
+        request = self.factory.get('/', host='localhost.localdomain')
+        cookies = self.middleware.process_response(request, response).cookies
+        self.assertEqual(cookies['a']['domain'], '')
+
+    def test_simple_tld(self):
+        response = HttpResponse()
+        response.set_cookie(key='a', value='a', domain=None)
+        # Top-level domains shouldn't get mutated
+        request = self.factory.get('/', host='ai')
+        cookies = self.middleware.process_response(request, response).cookies
+        self.assertEqual(cookies['a']['domain'], '')
+        # Domains inside a TLD are OK
+        request = self.factory.get('/', host='www.ai')
+        cookies = self.middleware.process_response(request, response).cookies
+        self.assertEqual(cookies['a']['domain'], '.www.ai')
+
+    def test_effective_tld(self):
+        response = HttpResponse()
+        response.set_cookie(key='a', value='a', domain=None)
+        # Effective top-level domains with a webserver shouldn't get mutated
+        request = self.factory.get('/', host='com.ai')
+        cookies = self.middleware.process_response(request, response).cookies
+        self.assertEqual(cookies['a']['domain'], '')
+        # Domains within an effective TLD are OK
+        request = self.factory.get('/', host='nic.com.ai')
+        cookies = self.middleware.process_response(request, response).cookies
+        self.assertEqual(cookies['a']['domain'], '.nic.com.ai')
+
+    def test_subdomain_depth(self):
+        response = HttpResponse()
+        response.set_cookie(key='a', value='a', domain=None)
+        with override_settings(MULTISITE_COOKIE_DOMAIN_DEPTH=1):
+            # At depth 1:
+            middleware = CookieDomainMiddleware()
+            # Top-level domains are ignored
+            request = self.factory.get('/', host='com')
+            cookies = middleware.process_response(request, response).cookies
+            self.assertEqual(cookies['a']['domain'], '')
+            # As are domains within a TLD
+            request = self.factory.get('/', host='example.com')
+            cookies = middleware.process_response(request, response).cookies
+            self.assertEqual(cookies['a']['domain'], '')
+            # But subdomains will get matched
+            request = self.factory.get('/', host='www.example.com')
+            cookies = middleware.process_response(request, response).cookies
+            self.assertEqual(cookies['a']['domain'], '.www.example.com')
+            # And sub-subdomains will get matched
+            cookies['a']['domain'] = ''
+            request = self.factory.get('/', host='www.us.app.example.com')
+            cookies = middleware.process_response(request, response).cookies
+            self.assertEqual(cookies['a']['domain'], '.app.example.com')

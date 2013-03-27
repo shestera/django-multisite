@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import os
+import tempfile
 from urlparse import urlsplit, urlunsplit
 
 from django.conf import settings
@@ -175,3 +177,56 @@ class DynamicSiteMiddleware(object):
     def site_deleted_hook(self, *args, **kwargs):
         """Clears the cache if Site was deleted."""
         self.cache.clear()
+
+
+class CookieDomainMiddleware(object):
+    def __init__(self):
+        self.depth = int(getattr(settings, 'MULTISITE_COOKIE_DOMAIN_DEPTH', 0))
+        if self.depth < 0:
+            raise ValueError(
+                'Invalid MULTISITE_COOKIE_DOMAIN_DEPTH: {depth!r}'.format(
+                    depth=self.depth
+                )
+            )
+        self.psl_cache = getattr(settings,
+                                 'MULTISITE_PUBLIC_SUFFIX_LIST_CACHE',
+                                 None)
+        if self.psl_cache is None:
+            self.psl_cache = os.path.join(tempfile.gettempdir(),
+                                          'multisite_tld.dat')
+        self._tldextract = None
+
+    def tldextract(self, url):
+        import tldextract
+        if self._tldextract is None:
+            self._tldextract = tldextract.TLDExtract(fetch=True,
+                                                     cache_file=self.psl_cache)
+        return self._tldextract(url)
+
+    def match_cookies(self, request, response):
+        return [c for c in response.cookies.values() if not c['domain']]
+
+    def process_response(self, request, response):
+        matched = self.match_cookies(request=request, response=response)
+        if not matched:
+            return response     # No cookies to edit
+
+        parsed = self.tldextract(request.get_host())
+        if not parsed.tld:
+            return response     # IP address or local path
+        if not parsed.domain:
+            return response     # Only TLD
+
+        subdomains = parsed.subdomain.split('.') if parsed.subdomain else []
+        if not self.depth:
+            subdomains = ['']
+        elif len(subdomains) < self.depth:
+            return response     # Not enough subdomain parts
+        else:
+            subdomains = [''] + subdomains[-self.depth:]
+
+        domain = '.'.join(subdomains + [parsed.domain, parsed.tld])
+
+        for morsel in matched:
+            morsel['domain'] = domain
+        return response
