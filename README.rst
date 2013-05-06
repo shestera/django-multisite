@@ -103,7 +103,7 @@ in the system's default temporary directory
 as ``effective_tld_names.dat``.
 To change this in settings.py::
 
-    MULTISITE_PUBLIC_SUFFIX_LIST_CACHE = '/path/to/multisite_tld.da't
+    MULTISITE_PUBLIC_SUFFIX_LIST_CACHE = '/path/to/multisite_tld.dat'
 
 By default,
 any cookies without a domain set
@@ -111,6 +111,11 @@ will be reset to allow \*.domain.tld.
 To change this in settings.py::
 
     MULTISITE_COOKIE_DOMAIN_DEPTH = 1  # Allow only *.subdomain.domain.tld
+
+In order to fetch a new version of the list,
+run::
+
+    manage.py update_public_suffix_list
 
 .. _cross-domain cookies: http://en.wikipedia.org/wiki/HTTP_cookie#Domain_and_Path
 .. _Public Suffix List: http://publicsuffix.org/
