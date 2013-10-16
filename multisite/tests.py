@@ -1,7 +1,10 @@
 import os
 import tempfile
+from unittest import skipIf
 import warnings
 
+
+import django
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core.exceptions import (ImproperlyConfigured, SuspiciousOperation,
@@ -193,6 +196,8 @@ class DynamicSiteMiddlewareFallbackTest(TestCase):
         self.assertEqual(self.middleware.process_request(request), None)
         self.assertEqual(settings.SITE_ID, site.pk)
 
+    @skipIf(django.VERSION >= (1, 5, 0), "Starting Django 1.5, there are no "
+                                         "function based views.")
     def test_string_function(self):
         # Function based
         settings.MULTISITE_FALLBACK = 'django.views.generic.simple.redirect_to'
@@ -215,6 +220,8 @@ class DynamicSiteMiddlewareFallbackTest(TestCase):
         self.assertEqual(response['Location'],
                          settings.MULTISITE_FALLBACK_KWARGS['url'])
 
+    @skipIf(django.VERSION >= (1, 5, 0), "Starting Django 1.5, there are no "
+                                         "function based views.")
     def test_function_view(self):
         from django.views.generic.simple import redirect_to
         settings.MULTISITE_FALLBACK = redirect_to
