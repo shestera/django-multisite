@@ -24,6 +24,7 @@ Edit to settings.py MIDDLEWARE_CLASSES:
     MIDDLEWARE_CLASSES = (
         ...
         'multisite.middleware.DynamicSiteMiddleware',
+        'multisite.threadlocals.ThreadLocalsMiddleware',
         ...
     )
 
