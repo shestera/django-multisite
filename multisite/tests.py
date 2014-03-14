@@ -302,6 +302,15 @@ class CacheTest(TestCase):
 class SiteCacheTest(TestCase):
     def setUp(self):
         from django.contrib.sites import models
+
+        if hasattr(models, 'clear_site_cache'):
+            # Before Django 1.6, the Site cache is cleared after the Site
+            # object has been created. This replicates that behaviour.
+            def save(self, *args, **kwargs):
+                super(models.Site, self).save(*args, **kwargs)
+                models.SITE_CACHE.clear()
+            models.Site.save = save
+
         Site.objects.all().delete()
         self.host = 'example.com'
         self.site = Site.objects.create(domain=self.host)
