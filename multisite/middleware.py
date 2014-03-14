@@ -11,7 +11,13 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.urlresolvers import get_callable
 from django.db.models.signals import pre_save, post_delete, post_init
 from django.http import Http404, HttpResponsePermanentRedirect
-from django.utils.hashcompat import md5_constructor
+
+try:
+    # Deprecated in Django 1.5
+    from django.utils.hashcompat import md5_constructor
+except ImportError:
+    # The above has been removed in Django 1.6
+    from hashlib import md5 as md5_constructor
 
 from .models import Alias
 
