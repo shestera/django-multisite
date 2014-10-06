@@ -134,3 +134,8 @@ class DictCache(object):
     def clear(self):
         """D.clear() -> None.  Remove all items from D."""
         self._cache.clear()
+
+    def get(self, key, default=None, version=None):
+        """D.key(k[, d]) -> k if D has a key k, else d. Defaults to None"""
+        hash(key)               # Raise TypeError if unhashable
+        return self._cache.get(key=key, default=default, version=version)

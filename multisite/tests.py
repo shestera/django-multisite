@@ -1,6 +1,5 @@
 import os
 import tempfile
-from unittest import skipIf
 import warnings
 
 
@@ -12,7 +11,7 @@ from django.core.exceptions import (ImproperlyConfigured, SuspiciousOperation,
 from django.http import Http404, HttpResponse
 from django.test import TestCase
 from django.test.client import RequestFactory as DjangoRequestFactory
-from django.utils.unittest import skipUnless
+from django.utils.unittest import skipUnless, skipIf
 
 try:
     from django.test.utils import override_settings
@@ -322,9 +321,21 @@ class SiteCacheTest(TestCase):
         # Populate cache
         self.assertEqual(Site.objects.get_current(), self.site)
         self.assertEqual(self.cache[self.site.id], self.site)
+        self.assertEqual(self.cache.get(key=self.site.id), self.site)
+        self.assertEqual(self.cache.get(key=-1),
+                         None)                         # Site doesn't exist
+        self.assertEqual(self.cache.get(-1, 'Default'),
+                         'Default')                    # Site doesn't exist
+        self.assertEqual(self.cache.get(key=-1, default='Non-existant'),
+                         'Non-existant')               # Site doesn't exist
+        self.assertEqual('Non-existant',
+                         self.cache.get(self.site.id, default='Non-existant',
+                                        version=100))  # Wrong key version 3
         # Clear cache
         self.cache.clear()
         self.assertRaises(KeyError, self.cache.__getitem__, self.site.id)
+        self.assertEqual(self.cache.get(key=self.site.id, default='Cleared'),
+                         'Cleared')
 
     def test_create_site(self):
         self.assertEqual(Site.objects.get_current(), self.site)
