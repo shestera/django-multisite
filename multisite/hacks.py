@@ -35,15 +35,22 @@ def SiteManager_clear_cache(self):
 class SiteCache(object):
     """Wrapper for SITE_CACHE that assigns a key_prefix."""
 
-    def __init__(self, cache=None, key_prefix=None):
+    def __init__(self, cache=None):
         from django.core.cache import get_cache
-
-        self._key_prefix = key_prefix
 
         if cache is None:
             cache_alias = getattr(settings, 'CACHE_SITES_ALIAS', 'default')
+            self._key_prefix = getattr(
+                settings,
+                'CACHE_MULTISITE_KEY_PREFIX',
+                settings.CACHES[cache_alias].get('KEY_PREFIX', '')
+            )
             cache = get_cache(cache_alias, KEY_PREFIX=self.key_prefix)
             self._warn_cache_backend(cache, cache_alias)
+        else:
+            self._key_prefix = getattr(
+                settings, 'CACHE_MULTISITE_KEY_PREFIX', cache.key_prefix
+            )
         self._cache = cache
 
     def _warn_cache_backend(self, cache, cache_alias):
@@ -71,8 +78,6 @@ class SiteCache(object):
 
     @property
     def key_prefix(self):
-        if self._key_prefix is None:
-            return getattr(settings, 'CACHE_SITES_KEY_PREFIX', '')
         return self._key_prefix
 
     def get(self, key, *args, **kwargs):

@@ -30,8 +30,12 @@ class DynamicSiteMiddleware(object):
 
         self.cache_alias = getattr(settings, 'CACHE_MULTISITE_ALIAS',
                                    'default')
-        self.key_prefix = getattr(settings, 'CACHE_MULTISITE_KEY_PREFIX',
-                                  '')
+        self.key_prefix = getattr(
+            settings,
+            'CACHE_MULTISITE_KEY_PREFIX',
+            settings.CACHES[self.cache_alias].get('KEY_PREFIX', '')
+        )
+
         self.cache = get_cache(self.cache_alias, KEY_PREFIX=self.key_prefix)
         post_init.connect(self.site_domain_cache_hook, sender=Site,
                           dispatch_uid='multisite_post_init')
