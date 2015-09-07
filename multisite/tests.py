@@ -58,7 +58,10 @@ class TestContribSite(TestCase):
             'django.contrib.sites is not in settings.INSTALLED_APPS')
 @override_settings(
     SITE_ID=SiteID(default=0),
-    CACHE_MULTISITE_ALIAS='django.core.cache.backends.dummy.DummyCache',
+    CACHE_MULTISITE_ALIAS='multisite',
+    CACHES={
+        'multisite': {'BACKEND': 'django.core.cache.backends.dummy.DummyCache'}
+    },
     MULTISITE_FALLBACK=None,
 )
 class DynamicSiteMiddlewareTest(TestCase):
@@ -167,8 +170,10 @@ class DynamicSiteMiddlewareTest(TestCase):
             'django.contrib.sites is not in settings.INSTALLED_APPS')
 @override_settings(
     SITE_ID=SiteID(default=0),
-    CACHE_MULTISITE_ALIAS='django.core.cache.backends.dummy.DummyCache',
-    MULTISITE_FALLBACK=None,
+    CACHE_MULTISITE_ALIAS='multisite',
+    CACHES={
+        'multisite': {'BACKEND': 'django.core.cache.backends.dummy.DummyCache'}
+    },    MULTISITE_FALLBACK=None,
     MULTISITE_FALLBACK_KWARGS={},
 )
 class DynamicSiteMiddlewareFallbackTest(TestCase):
@@ -259,7 +264,10 @@ class DynamicSiteMiddlewareSettingsTest(TestCase):
 
 @override_settings(
     SITE_ID=SiteID(default=0),
-    CACHE_MULTISITE_ALIAS='django.core.cache.backends.locmem.LocMemCache',
+    CACHE_MULTISITE_ALIAS='multisite',
+    CACHES={
+        'multisite': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}
+    },
     MULTISITE_FALLBACK=None,
 )
 class CacheTest(TestCase):
@@ -296,7 +304,7 @@ class CacheTest(TestCase):
             'django.contrib.sites is not in settings.INSTALLED_APPS')
 @override_settings(
     SITE_ID=SiteID(),
-    CACHE_SITES_KEY_PREFIX='__test__',
+    CACHE_MULTISITE_KEY_PREFIX='__test__',
 )
 class SiteCacheTest(TestCase):
     def setUp(self):
