@@ -13,6 +13,8 @@ from django.test import TestCase
 from django.test.client import RequestFactory as DjangoRequestFactory
 from django.utils.unittest import skipUnless, skipIf
 
+from hacks import use_framework_for_site_cache
+
 try:
     from django.test.utils import override_settings
 except ImportError:
@@ -58,7 +60,10 @@ class TestContribSite(TestCase):
             'django.contrib.sites is not in settings.INSTALLED_APPS')
 @override_settings(
     SITE_ID=SiteID(default=0),
-    CACHE_MULTISITE_ALIAS='django.core.cache.backends.dummy.DummyCache',
+    CACHE_MULTISITE_ALIAS='multisite',
+    CACHES={
+        'multisite': {'BACKEND': 'django.core.cache.backends.dummy.DummyCache'}
+    },
     MULTISITE_FALLBACK=None,
 )
 class DynamicSiteMiddlewareTest(TestCase):
@@ -167,8 +172,10 @@ class DynamicSiteMiddlewareTest(TestCase):
             'django.contrib.sites is not in settings.INSTALLED_APPS')
 @override_settings(
     SITE_ID=SiteID(default=0),
-    CACHE_MULTISITE_ALIAS='django.core.cache.backends.dummy.DummyCache',
-    MULTISITE_FALLBACK=None,
+    CACHE_MULTISITE_ALIAS='multisite',
+    CACHES={
+        'multisite': {'BACKEND': 'django.core.cache.backends.dummy.DummyCache'}
+    },    MULTISITE_FALLBACK=None,
     MULTISITE_FALLBACK_KWARGS={},
 )
 class DynamicSiteMiddlewareFallbackTest(TestCase):
@@ -259,7 +266,10 @@ class DynamicSiteMiddlewareSettingsTest(TestCase):
 
 @override_settings(
     SITE_ID=SiteID(default=0),
-    CACHE_MULTISITE_ALIAS='django.core.cache.backends.locmem.LocMemCache',
+    CACHE_MULTISITE_ALIAS='multisite',
+    CACHES={
+        'multisite': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}
+    },
     MULTISITE_FALLBACK=None,
 )
 class CacheTest(TestCase):
@@ -294,11 +304,15 @@ class CacheTest(TestCase):
 
 @skipUnless(Site._meta.installed,
             'django.contrib.sites is not in settings.INSTALLED_APPS')
-@override_settings(
-    SITE_ID=SiteID(),
-    CACHE_SITES_KEY_PREFIX='__test__',
-)
+@override_settings(SITE_ID=SiteID(),)
 class SiteCacheTest(TestCase):
+
+    def _initialize_cache(self):
+        # initialize cache again so override key prefix settings are used
+        from django.contrib.sites import models
+        use_framework_for_site_cache()
+        self.cache = models.SITE_CACHE
+
     def setUp(self):
         from django.contrib.sites import models
 
@@ -310,10 +324,10 @@ class SiteCacheTest(TestCase):
                 models.SITE_CACHE.clear()
             models.Site.save = save
 
+        self._initialize_cache()
         Site.objects.all().delete()
         self.host = 'example.com'
         self.site = Site.objects.create(domain=self.host)
-        self.cache = models.SITE_CACHE
         settings.SITE_ID.set(self.site.id)
 
     def test_get_current(self):
@@ -361,6 +375,59 @@ class SiteCacheTest(TestCase):
         # Delete site
         self.site.delete()
         self.assertRaises(KeyError, self.cache.__getitem__, self.site.id)
+
+    @override_settings(CACHE_MULTISITE_KEY_PREFIX="__test__")
+    def test_multisite_key_prefix(self):
+        self._initialize_cache()
+        # Populate cache
+        self.assertEqual(Site.objects.get_current(), self.site)
+        self.assertEqual(self.cache[self.site.id], self.site)
+        self.assertEqual(
+            self.cache._cache._get_cache_key(self.site.id),
+            'sites.{}.{}'.format(
+                settings.CACHE_MULTISITE_KEY_PREFIX, self.site.id
+            ),
+            self.cache._cache._get_cache_key(self.site.id)
+        )
+
+    @override_settings(
+       CACHES={'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+                'KEY_PREFIX': 'test1'
+       }}
+    )
+    def test_default_key_prefix(self):
+        self._initialize_cache()
+        # Populate cache
+        self.assertEqual(Site.objects.get_current(), self.site)
+        self.assertEqual(self.cache[self.site.id], self.site)
+        self.assertEqual(
+            self.cache._cache._get_cache_key(self.site.id),
+            'sites.{}.{}'.format(
+                settings.CACHES['default']['KEY_PREFIX'], self.site.id
+            ),
+            self.cache._cache._get_cache_key(self.site.id)
+        )
+
+    @override_settings(
+       CACHE_MULTISITE_KEY_PREFIX="__test__",
+       CACHES={'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+                'KEY_PREFIX': 'test1'
+       }}
+    )
+    def test_multisite_key_prefix_takes_priority_over_default(self):
+        self._initialize_cache()
+        # Populate cache
+        self.assertEqual(Site.objects.get_current(), self.site)
+        self.assertEqual(self.cache[self.site.id], self.site)
+        self.assertEqual(
+            self.cache._cache._get_cache_key(self.site.id),
+            'sites.{}.{}'.format(
+                settings.CACHE_MULTISITE_KEY_PREFIX, self.site.id
+            ),
+            self.cache._cache._get_cache_key(self.site.id)
+        )
 
 
 class TestSiteID(TestCase):
