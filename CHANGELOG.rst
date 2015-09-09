@@ -2,6 +2,11 @@
 Release Notes
 =============
 
+0.5.1
+-----
+
+* Add key prefix tests
+
 0.5.0
 -----
 
