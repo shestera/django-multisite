@@ -95,8 +95,8 @@ class PathAssistedCurrentSiteManager(models.CurrentSiteManager):
         super(PathAssistedCurrentSiteManager, self).__init__()
         self.__field_path = field_path
 
-    def get_query_set(self):
+    def get_queryset(self):
         from django.contrib.sites.models import Site
-        return super(models.CurrentSiteManager, self).get_query_set().filter(
+        return super(models.CurrentSiteManager, self).get_queryset().filter(
                     **{self.__field_path: Site.objects.get_current()}
                 )
