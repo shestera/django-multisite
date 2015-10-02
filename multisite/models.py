@@ -18,8 +18,8 @@ use_framework_for_site_cache()
 class AliasManager(models.Manager):
     """Manager for all Aliases."""
 
-    def get_query_set(self):
-        return super(AliasManager, self).get_query_set().select_related('site')
+    def get_queryset(self):
+        return super(AliasManager, self).get_queryset().select_related('site')
 
     def resolve(self, host, port=None):
         """
@@ -36,7 +36,7 @@ class AliasManager(models.Manager):
         """
         domains = self._expand_netloc(host=host, port=port)
         q = reduce(operator.or_, (Q(domain__iexact=d) for d in domains))
-        aliases = dict((a.domain, a) for a in self.get_query_set().filter(q))
+        aliases = dict((a.domain, a) for a in self.get_queryset().filter(q))
         for domain in domains:
             try:
                 return aliases[domain]
@@ -88,8 +88,8 @@ class AliasManager(models.Manager):
 class CanonicalAliasManager(models.Manager):
     """Manager for Alias objects where is_canonical is True."""
 
-    def get_query_set(self):
-        qset = super(CanonicalAliasManager, self).get_query_set()
+    def get_queryset(self):
+        qset = super(CanonicalAliasManager, self).get_queryset()
         return qset.filter(is_canonical=True)
 
     def sync_many(self, *args, **kwargs):
@@ -101,7 +101,7 @@ class CanonicalAliasManager(models.Manager):
 
             Alias.canonical.sync_many(site__domain='example.com')
         """
-        aliases = self.get_query_set().filter(*args, **kwargs)
+        aliases = self.get_queryset().filter(*args, **kwargs)
         for alias in aliases.select_related('site'):
             domain = alias.site.domain
             if domain and alias.domain != domain:
@@ -110,7 +110,7 @@ class CanonicalAliasManager(models.Manager):
 
     def sync_missing(self):
         """Create missing canonical Alias objects based on Site.domain."""
-        aliases = self.get_query_set()
+        aliases = self.get_queryset()
         sites = self.model._meta.get_field('site').rel.to
         for site in sites.objects.exclude(aliases__in=aliases):
             Alias.sync(site=site)
@@ -124,8 +124,8 @@ class CanonicalAliasManager(models.Manager):
 class NotCanonicalAliasManager(models.Manager):
     """Manager for Aliases where is_canonical is None."""
 
-    def get_query_set(self):
-        qset = super(NotCanonicalAliasManager, self).get_query_set()
+    def get_queryset(self):
+        qset = super(NotCanonicalAliasManager, self).get_queryset()
         return qset.filter(is_canonical__isnull=True)
 
 
