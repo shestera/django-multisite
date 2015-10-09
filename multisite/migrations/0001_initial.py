@@ -1,49 +1,32 @@
-# encoding: utf-8
-from south.db import db
-from south.v2 import SchemaMigration
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
+from django.db import models, migrations
+import multisite.models
 
 
-class Migration(SchemaMigration):
-    def forwards(self, orm):
-        """Create Alias table."""
+class Migration(migrations.Migration):
 
-        # Adding model 'Alias'
-        db.create_table('multisite_alias', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('site', self.gf('django.db.models.fields.related.ForeignKey')(related_name='aliases', to=orm['sites.Site'])),
-            ('domain', self.gf('django.db.models.fields.CharField')(unique=True, max_length=100)),
-            ('is_canonical', self.gf('django.db.models.fields.NullBooleanField')(default=None, null=True, blank=True)),
-        ))
-        db.send_create_signal('multisite', ['Alias'])
+    dependencies = [
+        ('sites', '0001_initial'),
+    ]
 
-        # Adding unique constraint on 'Alias',
-        # fields ['is_canonical', 'site']
-        db.create_unique('multisite_alias', ['is_canonical', 'site_id'])
-
-    def backwards(self, orm):
-        """Drop Alias table."""
-
-        # Removing unique constraint on 'Alias',
-        # fields ['is_canonical', 'site']
-        db.delete_unique('multisite_alias', ['is_canonical', 'site_id'])
-
-        # Deleting model 'Alias'
-        db.delete_table('multisite_alias')
-
-    models = {
-        'multisite.alias': {
-            'Meta': {'unique_together': "[('is_canonical', 'site')]", 'object_name': 'Alias'},
-            'domain': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '100'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'is_canonical': ('django.db.models.fields.NullBooleanField', [], {'default': 'None', 'null': 'True', 'blank': 'True'}),
-            'site': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'aliases'", 'to': "orm['sites.Site']"})
-        },
-        'sites.site': {
-            'Meta': {'ordering': "('domain',)", 'object_name': 'Site', 'db_table': "'django_site'"},
-            'domain': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '50'})
-        }
-    }
-
-    complete_apps = ['multisite']
+    operations = [
+        migrations.CreateModel(
+            name='Alias',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('domain', models.CharField(help_text='Either "domain" or "domain:port"', unique=True, max_length=100, verbose_name='domain name')),
+                ('is_canonical', models.NullBooleanField(default=None, validators=[multisite.models.validate_true_or_none], editable=False, help_text='Does this domain name match the one in site?', verbose_name='is canonical?')),
+                ('redirect_to_canonical', models.BooleanField(default=True, help_text='Should this domain name redirect to the one in site?', verbose_name='redirect to canonical?')),
+                ('site', models.ForeignKey(related_name='aliases', to='sites.Site')),
+            ],
+            options={
+                'verbose_name_plural': 'aliases',
+            },
+        ),
+        migrations.AlterUniqueTogether(
+            name='alias',
+            unique_together=set([('is_canonical', 'site')]),
+        ),
+    ]
