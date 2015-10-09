@@ -2,6 +2,11 @@
 Release Notes
 =============
 
+1.1.0
+-----
+
+* We now support post-South Django 1.7 native migrations.
+
 1.0.0
 -----
 
