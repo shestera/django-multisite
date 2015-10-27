@@ -99,10 +99,10 @@ class SiteID(local):
            ...    print settings.SITE_ID
            2
         """
-        site_id = self.site_id
+        site_id_original = self.site_id
         self.set(value)
         yield self
-        self.site_id = site_id
+        self.site_id = site_id_original
 
     def set(self, value):
         from django.db.models import Model
