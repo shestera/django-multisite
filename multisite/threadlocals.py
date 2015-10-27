@@ -101,8 +101,10 @@ class SiteID(local):
         """
         site_id_original = self.site_id
         self.set(value)
-        yield self
-        self.site_id = site_id_original
+        try:
+            yield self
+        finally:
+            self.site_id = site_id_original
 
     def set(self, value):
         from django.db.models import Model
