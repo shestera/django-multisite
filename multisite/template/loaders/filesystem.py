@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from django.core.exceptions import SuspiciousFileOperation
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.template.loaders.filesystem import Loader as FilesystemLoader
@@ -26,7 +27,7 @@ class Loader(FilesystemLoader):
             except UnicodeDecodeError:
                 # The template dir name was a bytestring that wasn't valid UTF-8.
                 raise
-            except ValueError:
+            except (ValueError, SuspiciousFileOperation):
                 # The joined path was located outside of this particular
                 # template_dir (it might be inside another one, so this isn't
                 # fatal).
