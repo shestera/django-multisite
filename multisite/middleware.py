@@ -122,7 +122,7 @@ class DynamicSiteMiddleware(object):
         if callable(fallback):
             view = fallback
         else:
-            view = get_callable(fallback)
+            view = get_callable(fallback, can_fail=True)
             if not callable(view):
                 raise ImproperlyConfigured(
                     'settings.MULTISITE_FALLBACK is not callable: %s' %
