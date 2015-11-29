@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
 import os
 import tempfile
-from urlparse import urlsplit, urlunsplit
+try:
+    from urlparse import urlsplit, urlunsplit
+except ImportError:
+    from urllib.parse import urlsplit, urlunsplit
 
 from django.conf import settings
 from django.contrib.sites.models import Site, SITE_CACHE
@@ -44,7 +49,7 @@ class DynamicSiteMiddleware(object):
 
     def get_cache_key(self, netloc):
         """Returns a cache key based on ``netloc``."""
-        netloc = md5_constructor(netloc)
+        netloc = md5_constructor(netloc.encode('utf-8'))
         return 'multisite.alias.%s.%s' % (self.key_prefix,
                                           netloc.hexdigest())
 

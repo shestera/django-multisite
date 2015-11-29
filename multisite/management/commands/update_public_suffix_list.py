@@ -1,3 +1,5 @@
+from __future__ import print_function, unicode_literals
+
 import logging
 import os
 import tempfile
@@ -41,4 +43,4 @@ class Command(NoArgsCommand):
 
     def log(self, msg, level=2):
         if self.verbosity >= level:
-            print msg
+            print(msg)

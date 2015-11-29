@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from django.utils.functional import SimpleLazyObject
 
 from django import VERSION as django_version

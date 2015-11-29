@@ -1,4 +1,8 @@
+from __future__ import unicode_literals
+
 import operator
+from builtins import range
+from functools import reduce
 
 from django.contrib.sites.models import Site
 from django.core.exceptions import ValidationError
@@ -74,7 +78,7 @@ class AliasManager(models.Manager):
             bits = host.split('.')
 
         result = []
-        for i in xrange(0, (len(bits) + 1)):
+        for i in range(0, (len(bits) + 1)):
             if i == 0:
                 host = '.'.join(bits[i:])
             else:
@@ -182,12 +186,12 @@ class Alias(models.Model):
         errors = {}
         try:
             super(Alias, self).clean_fields(exclude=exclude, *args, **kwargs)
-        except ValidationError, e:
+        except ValidationError as e:
             errors = e.update_error_dict(errors)
 
         try:
             self.clean_domain()
-        except ValidationError, e:
+        except ValidationError as e:
             errors = e.update_error_dict(errors)
 
         if errors:
@@ -204,7 +208,7 @@ class Alias(models.Model):
         errors = {}
         try:
             super(Alias, self).validate_unique(exclude=exclude)
-        except ValidationError, e:
+        except ValidationError as e:
             errors = e.update_error_dict(errors)
 
         if exclude is not None and 'domain' not in exclude:

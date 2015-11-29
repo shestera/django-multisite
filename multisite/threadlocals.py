@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*
+from __future__ import unicode_literals
 
+from builtins import int
 from contextlib import contextmanager
 from warnings import warn
 
@@ -41,7 +43,7 @@ class SiteID(local):
         ``default``, if specified, determines the default SITE_ID,
         if that is unset.
         """
-        if default is not None and not isinstance(default, (int, long)):
+        if default is not None and not isinstance(default, int):
             raise ValueError("%r is not a valid default." % default)
         self.default = default
         self.reset()
@@ -58,21 +60,21 @@ class SiteID(local):
         return self.site_id
 
     def __lt__(self, other):
-        if isinstance(other, (int, long)):
+        if isinstance(other, int):
             return self.__int__() < other
         elif isinstance(other, SiteID):
             return self.__int__() < other.__int__()
         return True
 
     def __le__(self, other):
-        if isinstance(other, (int, long)):
+        if isinstance(other, int):
             return self.__int__() <= other
         elif isinstance(other, SiteID):
             return self.__int__() <= other.__int__()
         return True
 
     def __eq__(self, other):
-        if isinstance(other, (int, long)):
+        if isinstance(other, int):
             return self.__int__() == other
         elif isinstance(other, SiteID):
             return self.__int__() == other.__int__()
