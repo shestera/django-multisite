@@ -1,7 +1,6 @@
 from __future__ import unicode_literals
 
 import operator
-from builtins import range
 from functools import reduce
 
 from django.contrib.sites.models import Site
@@ -13,6 +12,11 @@ from django.db.models.signals import pre_save, post_save, post_syncdb
 from django.utils.translation import ugettext_lazy as _
 
 from .hacks import use_framework_for_site_cache
+
+try:
+    xrange
+except NameError:  # python3
+    xrange = range
 
 _site_domain = Site._meta.get_field('domain')
 
@@ -78,7 +82,7 @@ class AliasManager(models.Manager):
             bits = host.split('.')
 
         result = []
-        for i in range(0, (len(bits) + 1)):
+        for i in xrange(0, (len(bits) + 1)):
             if i == 0:
                 host = '.'.join(bits[i:])
             else:
