@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from django.contrib import admin
 from django.contrib.admin.views.main import ChangeList
 from django.contrib.sites.models import Site

@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from django.contrib.sites.admin import SiteAdmin
 from django.core.exceptions import ValidationError
 

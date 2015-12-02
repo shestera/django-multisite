@@ -1,4 +1,7 @@
+from __future__ import unicode_literals
+
 import operator
+from functools import reduce
 
 from django.contrib.sites.models import Site
 from django.core.exceptions import ValidationError
@@ -9,6 +12,11 @@ from django.db.models.signals import pre_save, post_save, post_syncdb
 from django.utils.translation import ugettext_lazy as _
 
 from .hacks import use_framework_for_site_cache
+
+try:
+    xrange
+except NameError:  # python3
+    xrange = range
 
 _site_domain = Site._meta.get_field('domain')
 
@@ -182,12 +190,12 @@ class Alias(models.Model):
         errors = {}
         try:
             super(Alias, self).clean_fields(exclude=exclude, *args, **kwargs)
-        except ValidationError, e:
+        except ValidationError as e:
             errors = e.update_error_dict(errors)
 
         try:
             self.clean_domain()
-        except ValidationError, e:
+        except ValidationError as e:
             errors = e.update_error_dict(errors)
 
         if errors:
@@ -204,7 +212,7 @@ class Alias(models.Model):
         errors = {}
         try:
             super(Alias, self).validate_unique(exclude=exclude)
-        except ValidationError, e:
+        except ValidationError as e:
             errors = e.update_error_dict(errors)
 
         if exclude is not None and 'domain' not in exclude:
