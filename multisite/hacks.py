@@ -36,7 +36,14 @@ class SiteCache(object):
     """Wrapper for SITE_CACHE that assigns a key_prefix."""
 
     def __init__(self, cache=None):
-        from django.core.cache import get_cache
+        try:
+            from django.core.cache import caches
+        except ImportError:
+            # Django < 1.7 compatibility
+            from django.core.cache import get_cache
+        else:
+            def get_cache(cache_alias):
+                return caches[cache_alias]
 
         if cache is None:
             cache_alias = getattr(settings, 'CACHE_SITES_ALIAS', 'default')
@@ -45,7 +52,7 @@ class SiteCache(object):
                 'CACHE_MULTISITE_KEY_PREFIX',
                 settings.CACHES[cache_alias].get('KEY_PREFIX', '')
             )
-            cache = get_cache(cache_alias, KEY_PREFIX=self.key_prefix)
+            cache = get_cache(cache_alias)
             self._warn_cache_backend(cache, cache_alias)
         else:
             self._key_prefix = getattr(

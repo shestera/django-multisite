@@ -6,7 +6,16 @@ from urlparse import urlsplit, urlunsplit
 from django.conf import settings
 from django.contrib.sites.models import Site, SITE_CACHE
 from django.core import mail
-from django.core.cache import get_cache
+
+try:
+    from django.core.cache import caches
+except ImportError:
+    # Django < 1.7 compatibility
+    from django.core.cache import get_cache
+else:
+    def get_cache(cache_alias):
+        return caches[cache_alias]
+
 from django.core.exceptions import ImproperlyConfigured
 from django.core.urlresolvers import get_callable
 from django.db.models.signals import pre_save, post_delete, post_init
@@ -36,7 +45,7 @@ class DynamicSiteMiddleware(object):
             settings.CACHES[self.cache_alias].get('KEY_PREFIX', '')
         )
 
-        self.cache = get_cache(self.cache_alias, KEY_PREFIX=self.key_prefix)
+        self.cache = get_cache(self.cache_alias)
         post_init.connect(self.site_domain_cache_hook, sender=Site,
                           dispatch_uid='multisite_post_init')
         pre_save.connect(self.site_domain_changed_hook, sender=Site)
