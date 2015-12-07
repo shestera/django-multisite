@@ -2,6 +2,12 @@
 Release Notes
 =============
 
+1.2.0
+-----
+
+* We now support Django 1.9
+* Following deprecation in django, all get_cache methods have been replaced caches.
+
 1.1.0
 -----
 
