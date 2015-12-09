@@ -12,6 +12,7 @@ from django.db.models.signals import pre_save, post_save
 try:
     from django.db.models.signals import post_migrate
 except ImportError:
+    # Django < 1.7 compatibility
     from django.db.models.signals import post_syncdb as post_migrate
 from django.utils.translation import ugettext_lazy as _
 
