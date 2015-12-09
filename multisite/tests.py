@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 
 import os
 import tempfile
+from unittest import skipUnless, skipIf
 import warnings
 
 
@@ -13,7 +14,6 @@ from django.core.exceptions import (ImproperlyConfigured, SuspiciousOperation,
 from django.http import Http404, HttpResponse
 from django.test import TestCase
 from django.test.client import RequestFactory as DjangoRequestFactory
-from django.utils.unittest import skipUnless, skipIf
 
 from hacks import use_framework_for_site_cache
 
