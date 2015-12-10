@@ -2,6 +2,12 @@
 Release Notes
 =============
 
+1.2.1
+-----
+
+* Remove django.utils.unittest (deprecated in 1.9)
+* Use post_migrate instead of post_syncdb in > 1.7
+
 1.2.0
 -----
 
