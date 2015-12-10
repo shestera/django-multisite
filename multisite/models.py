@@ -8,7 +8,12 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_ipv4_address
 from django.db import connections, models, router
 from django.db.models import Q
-from django.db.models.signals import pre_save, post_save, post_syncdb
+from django.db.models.signals import pre_save, post_save
+try:
+    from django.db.models.signals import post_migrate
+except ImportError:
+    # Django < 1.7 compatibility
+    from django.db.models.signals import post_syncdb as post_migrate
 from django.utils.translation import ugettext_lazy as _
 
 from .hacks import use_framework_for_site_cache
@@ -315,9 +320,15 @@ class Alias(models.Model):
         cls.sync(site=instance)
 
     @classmethod
-    def db_table_created_hook(cls, created_models, *args, **kwargs):
+    def db_table_created_hook(cls, *args, **kwargs):
         """Syncs canonical Alias objects for all existing Site objects."""
-        if cls in created_models:
+        if kwargs.get('created_models'):
+            # For post_syncdb support in Django < 1.7:
+            # As before, only sync_all if Alias was in
+            # the list of created models
+            if cls in kwargs['created_models']:
+                Alias.canonical.sync_all()
+        else:
             Alias.canonical.sync_all()
 
 
@@ -326,4 +337,4 @@ pre_save.connect(Alias.site_domain_changed_hook, sender=Site)
 post_save.connect(Alias.site_created_hook, sender=Site)
 
 # Hook to handle syncdb creating the Alias table
-post_syncdb.connect(Alias.db_table_created_hook)
+post_migrate.connect(Alias.db_table_created_hook)
