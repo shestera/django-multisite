@@ -37,7 +37,7 @@ class Loader(FilesystemLoader):
                 # The joined path was located outside of this particular
                 # template_dir (it might be inside another one, so this isn't
                 # fatal).
-                pass
+                continue
 
             # Template loading was changed in Django 1.9, and
             # django now expects an Origin object to be returned
