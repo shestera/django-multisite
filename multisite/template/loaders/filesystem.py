@@ -7,8 +7,9 @@ from django.contrib.sites.models import Site
 try:
     from django.template import Origin
 except ImportError:
-    # Django < 1.9
-    pass
+    # Django < 1.9 only expects the name string, not an Origin object
+    def Origin(name="", *args, **kwargs):
+        return name
 from django.template.loaders.filesystem import Loader as FilesystemLoader
 from django.utils._os import safe_join
 
@@ -39,13 +40,8 @@ class Loader(FilesystemLoader):
                 # fatal).
                 continue
 
-            # Template loading was changed in Django 1.9, and
-            # django now expects an Origin object to be returned
-            try:
-                yield Origin(
-                    name=name,
-                    template_name=template_name,
-                    loader=self
-                )
-            except NameError:
-                yield name
+            yield Origin(
+                name=name,
+                template_name=template_name,
+                loader=self
+            )
