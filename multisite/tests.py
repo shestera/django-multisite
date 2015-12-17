@@ -726,6 +726,7 @@ class AliasTest(TestCase):
         site.domain = ''
         self.assertRaises(Alias.MultipleObjectsReturned, site.save)
         Alias.aliases.all().delete()
+        Site.objects.get(domain='').delete()  # domain is unique in Django1.9
         site.save()
         self.assertFalse(Alias.objects.filter(site=site).exists())
         # Change Site from an empty domain name
