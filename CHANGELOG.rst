@@ -2,6 +2,11 @@
 Release Notes
 =============
 
+1.2.2
+-----
+
+* Fix for 1.9: change the return type of filesystem template loader's get_template_sources()
+
 1.2.1
 -----
 
