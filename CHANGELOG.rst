@@ -2,6 +2,10 @@
 Release Notes
 =============
 
+1.2.3
+-----
+* Fix a broken test, due to a django uniqueness constraint in 1.9
+
 1.2.2
 -----
 
