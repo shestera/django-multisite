@@ -189,6 +189,11 @@ class Alias(models.Model):
 
     def save_base(self, *args, **kwargs):
         self.full_clean()
+        # For canonical Alias, domains must match Site domains.
+        if self.is_canonical and self.domain != self.site.domain:
+            raise ValidationError(
+                {'domain': ['Does not match %r' % self.site]}
+            )
         super(Alias, self).save_base(*args, **kwargs)
 
     def clean_fields(self, exclude=None, *args, **kwargs):
@@ -198,20 +203,8 @@ class Alias(models.Model):
         except ValidationError as e:
             errors = e.update_error_dict(errors)
 
-        try:
-            self.clean_domain()
-        except ValidationError as e:
-            errors = e.update_error_dict(errors)
-
         if errors:
             raise ValidationError(errors)
-
-    def clean_domain(self):
-        # For canonical Alias, domains must match Site domains.
-        if self.is_canonical and self.domain != self.site.domain:
-            raise ValidationError(
-                {'domain': ['Does not match %r' % self.site]}
-            )
 
     def validate_unique(self, exclude=None):
         errors = {}
