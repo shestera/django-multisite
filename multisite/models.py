@@ -189,29 +189,16 @@ class Alias(models.Model):
 
     def save_base(self, *args, **kwargs):
         self.full_clean()
-        super(Alias, self).save_base(*args, **kwargs)
-
-    def clean_fields(self, exclude=None, *args, **kwargs):
-        errors = {}
-        try:
-            super(Alias, self).clean_fields(exclude=exclude, *args, **kwargs)
-        except ValidationError as e:
-            errors = e.update_error_dict(errors)
-
-        try:
-            self.clean_domain()
-        except ValidationError as e:
-            errors = e.update_error_dict(errors)
-
-        if errors:
-            raise ValidationError(errors)
-
-    def clean_domain(self):
         # For canonical Alias, domains must match Site domains.
+        # This needs to be validated here so that it is executed *after* the
+        # Site pre-save signal updates the domain (an AliasInline modelform
+        # on SiteAdmin will be saved (and it's clean methods run before
+        # the Site is saved)
         if self.is_canonical and self.domain != self.site.domain:
             raise ValidationError(
                 {'domain': ['Does not match %r' % self.site]}
             )
+        super(Alias, self).save_base(*args, **kwargs)
 
     def validate_unique(self, exclude=None):
         errors = {}
@@ -226,7 +213,7 @@ class Alias(models.Model):
             field_error = self.unique_error_message(self.__class__,
                                                     (field_name,))
             if field_name not in errors or \
-               field_error not in errors[field_name]:
+               str(field_error) not in [str(err) for err in errors[field_name]]:
                 qset = self.__class__.objects.filter(
                     **{field_name + '__iexact': getattr(self, field_name)}
                 )
