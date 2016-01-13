@@ -2,6 +2,10 @@
 Release Notes
 =============
 
+1.2.4
+-----
+* Fix domain validation so it's called after the pre_save signal
+
 1.2.3
 -----
 * Fix a broken test, due to a django uniqueness constraint in 1.9
