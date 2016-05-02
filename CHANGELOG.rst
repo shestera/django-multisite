@@ -2,6 +2,10 @@
 Release Notes
 =============
 
+1.2.5
+----
+* Make template loading more resilient to changes in django (thanks to jbazik for the contribution)
+
 1.2.4
 -----
 * Fix domain validation so it's called after the pre_save signal
