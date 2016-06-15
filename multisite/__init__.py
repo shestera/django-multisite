@@ -1,3 +1,3 @@
 from .threadlocals import SiteDomain, SiteID
 
-VERSION = "l.2.5"
+VERSION = "l.2.6"

@@ -2,6 +2,10 @@
 Release Notes
 =============
 
+1.2.6
+----
+* Pin the tldextract dependency to version < 2.0, which breaks API.
+
 1.2.5
 ----
 * Make template loading more resilient to changes in django (thanks to jbazik for the contribution)
