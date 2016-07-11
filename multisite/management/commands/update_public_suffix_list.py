@@ -20,7 +20,7 @@ class Command(NoArgsCommand):
         )
         self.log("Updating {filename}".format(filename=filename))
 
-        extract = tldextract.TLDExtract(fetch=True, cache_file=filename)
+        extract = tldextract.TLDExtract(cache_file=filename)
         extract.update(fetch_now=True)
         self.log("Done.")
 

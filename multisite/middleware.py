@@ -223,8 +223,7 @@ class CookieDomainMiddleware(object):
     def tldextract(self, url):
         import tldextract
         if self._tldextract is None:
-            self._tldextract = tldextract.TLDExtract(fetch=True,
-                                                     cache_file=self.psl_cache)
+            self._tldextract = tldextract.TLDExtract(cache_file=self.psl_cache)
         return self._tldextract(url)
 
     def match_cookies(self, request, response):
