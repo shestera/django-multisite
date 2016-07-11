@@ -20,17 +20,8 @@ class Command(NoArgsCommand):
         )
         self.log("Updating {filename}".format(filename=filename))
 
-        with tempfile.NamedTemporaryFile(dir=os.path.dirname(filename)) as f:
-            tmpname = f.name
-
-            extract = tldextract.TLDExtract(fetch=True, cache_file=tmpname)
-            extract._get_tld_extractor()
-            self.log(
-                "Downloaded new data to {filename}".format(filename=tmpname)
-            )
-            os.rename(tmpname, filename)
-            f.delete = False    # No need to delete f any more.
-
+        extract = tldextract.TLDExtract(fetch=True, cache_file=filename)
+        extract.update(fetch_now=True)
         self.log("Done.")
 
     def setup_logging(self, verbosity):
