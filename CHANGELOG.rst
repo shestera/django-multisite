@@ -2,6 +2,11 @@
 Release Notes
 =============
 
+1.3.0
+-----
+* Fix tempfile issue with update_public_suffix_list command
+* Support for tldextract version >= 2.0
+
 1.2.6
 ----
 * Pin the tldextract dependency to version < 2.0, which breaks API.
