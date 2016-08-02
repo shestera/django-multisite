@@ -14,7 +14,7 @@ Quickstart
 Replace your SITE_ID in settings.py to::
 
     from multisite import SiteID
-    SITE_ID = SiteID()
+    SITE_ID = SiteID(default=1)
 
 Add to your settings.py TEMPLATES loaders in the OPTIONS section::
 
