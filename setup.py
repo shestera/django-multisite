@@ -11,7 +11,7 @@ def long_description():
 
 
 setup(name='django-multisite',
-      version='1.3.0',
+      version='1.3.1',
       description='Serve multiple sites from a single Django application',
       long_description=long_description(),
       author='Leonid S Shestera',

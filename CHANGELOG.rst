@@ -2,6 +2,12 @@
 Release Notes
 =============
 
+1.3.1
+-----
+* Add default for SiteID in the README (PR #31)
+* Respect the CACHE_MULTISITE_ALIAS in SiteCache (PR #34)
+* Replace deprecated ExtractResult().tld with .suffic (PR #32)
+
 1.3.0
 -----
 * Fix tempfile issue with update_public_suffix_list command
