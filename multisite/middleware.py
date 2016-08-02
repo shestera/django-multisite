@@ -235,7 +235,7 @@ class CookieDomainMiddleware(object):
             return response     # No cookies to edit
 
         parsed = self.tldextract(request.get_host())
-        if not parsed.tld:
+        if not parsed.suffix:
             return response     # IP address or local path
         if not parsed.domain:
             return response     # Only TLD
@@ -248,7 +248,7 @@ class CookieDomainMiddleware(object):
         else:
             subdomains = [''] + subdomains[-self.depth:]
 
-        domain = '.'.join(subdomains + [parsed.domain, parsed.tld])
+        domain = '.'.join(subdomains + [parsed.domain, parsed.suffix])
 
         for morsel in matched:
             morsel['domain'] = domain
