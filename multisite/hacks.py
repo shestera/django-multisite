@@ -48,7 +48,7 @@ class SiteCache(object):
                 return caches[cache_alias]
 
         if cache is None:
-            cache_alias = getattr(settings, 'CACHE_SITES_ALIAS', 'default')
+            cache_alias = getattr(settings, 'CACHE_MULTISITE_ALIAS', 'default')
             self._key_prefix = getattr(
                 settings,
                 'CACHE_MULTISITE_KEY_PREFIX',
