@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 import os
 
 _dir_ = os.path.dirname(__file__)
@@ -27,6 +27,7 @@ setup(name='django-multisite',
                 'multisite.template.loaders'],
       install_requires=['Django>=1.6',
                         'tldextract>=1.2'],
+      test_suite="multisite.tests",
       classifiers=['Development Status :: 4 - Beta',
                    'Environment :: Web Environment',
                    'Framework :: Django',
