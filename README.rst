@@ -143,18 +143,17 @@ To run the tests::
 
     python setup.py test
 
-Before deploying a change, you should run::
+Before deploying a change, to verify it has not broken anything you should run::
 
     test_versions
 
-to verify it has not broken anything. This script runs the tests
-under every supported combination of Django and Python, by creating
-virtualenvs. If a test breaks, it will quit, leaving the virtualenv
-intact in .venv-python2, or .venv-python3, depending on which space
-it broke in. You can rerun the broken version manually with::
+This runs the tests under every supported combination of Django and Python,
+isolated by creating virtualenvs. If a test breaks, it will quit, with the
+virtualenv intact in .venv-python2, or .venv-python3, depending on what broke. 
+You can investigate the broken version manually with::
 
     . .venv-python2/bin/activate  # or .venv-python3
     python setup.py test
 
 (of course, as new versions are supported and old are retired,
- please keep test_versions up to date)
+please keep test_versions up to date)
