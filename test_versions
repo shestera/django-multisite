@@ -12,13 +12,20 @@ for PYTHON in python2 python3; do
         rm -r .venv-$PYTHON;
     fi
     virtualenv -p $PYTHON .venv-$PYTHON
+
+    echo
+    echo ">>> Switched to $PYTHON <<<"
+    echo
+
     . .venv-$PYTHON/bin/activate
     for DJANGO in 1.6 1.7 1.8 1.9 1.10; do
         pip install django==$DJANGO
         echo $PYTHON/django$DJANGO
-        python setup.py test || exit $?
-        echo "-----------------------------------------------------------"
-        echo
+        if ! python setup.py test; then
+            echo
+            echo "Failed under $PYTHON and django-$DJANGO"
+            exit 1
+        fi
     done
     deactivate
 done
