@@ -19,6 +19,11 @@ for PYTHON in python2 python3; do
 
     . .venv-$PYTHON/bin/activate
     for DJANGO in 1.6 1.7 1.8 1.9 1.10; do
+        if [ $PYTHON == python3 -a \( $DJANGO = 1.6 -o $DJANGO = 1.7 \) ]; then
+            echo "Django-$DJANGO is unsupported on python3"
+            echo
+            continue
+        fi
         pip install django==$DJANGO
         echo $PYTHON/django$DJANGO
         if ! python setup.py test; then
