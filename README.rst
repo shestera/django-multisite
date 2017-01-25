@@ -101,8 +101,6 @@ domains, such as::
 Cross-domain cookies
 --------------------
 
-*New in version 0.3.0.*
-
 In order to support `cross-domain cookies`_,
 for purposes like single-sign-on,
 prepend the following to the top of
@@ -141,18 +139,22 @@ run::
 Tests
 -----
 
-Before testing, it is a good idea to set up a virtualenv. This way, the package can
-be tested under different combinations of python and django versions::
-
-    virtualenv .venv
-    . .venv/bin/activate
-
-While in an activated venv, you can pick specific versions of dependencies like this::
-
-    pip install django==1.7
-
-To use a different python version, erase the folder and rebuild with `virtualenv -P`
-
 To run the tests::
 
     python setup.py test
+
+Before deploying a change, you should run::
+
+    test_versions
+
+to verify it has not broken anything. This script runs the tests
+under every supported combination of Django and Python, by creating
+virtualenvs. If a test breaks, it will quit, leaving the virtualenv
+intact in .venv-python2, or .venv-python3, depending on which space
+it broke in. You can rerun the broken version manually with::
+
+    . .venv-python2/bin/activate  # or .venv-python3
+    python setup.py test
+
+(of course, as new versions are supported and old are retired,
+ please keep test_versions up to date)

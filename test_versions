@@ -1,0 +1,24 @@
+#!/bin/sh
+# systematically run tests under all combinations
+#  of pythons and djangos that we support.
+
+# ensure we are running in a known location:
+# the location of the current file
+cd $(dirname $0)
+
+for PYTHON in python2 python3; do
+    # *nuke* the virtualenv, if it exists
+    if [ -e .venv-$PYTHON ]; then
+        rm -r .venv-$PYTHON;
+    fi
+    virtualenv -p $PYTHON .venv-$PYTHON
+    . .venv-$PYTHON/bin/activate
+    for DJANGO in 1.6 1.7 1.8 1.9 1.10; do
+        pip install django==$DJANGO
+        echo $PYTHON/django$DJANGO
+        python setup.py test || exit $?
+        echo "-----------------------------------------------------------"
+        echo
+    done
+    deactivate
+done
