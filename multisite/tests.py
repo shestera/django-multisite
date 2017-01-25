@@ -18,12 +18,19 @@ import unittest
 from unittest import skipUnless, skipIf
 import warnings
 
+
+import django
+from django.conf import settings
+
 # this has to be set before (most of) django is loaded or else
 # the imports crash with django.core.exceptions.ImproperlyConfigured
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'test_settings')
 
-import django
-from django.conf import settings
+if django.VERSION >= (1,7):
+    # Django demands it.
+    # You *will* comply.
+    django.setup()
+
 from django.contrib.sites.models import Site
 from django.core.exceptions import (ImproperlyConfigured, SuspiciousOperation,
                                     ValidationError)
@@ -32,7 +39,7 @@ from django.test import TestCase
 from django.test.client import RequestFactory as DjangoRequestFactory
 # monkey-patch over version differences in django
 from django.test.utils import setup_test_environment, teardown_test_environment
-if django.VERSION >= (1,9):
+if django.VERSION >= (1,10):
     from django.test.utils import setup_databases, teardown_databases
 elif django.VERSION >= (1,6):
     # {setup,teardown}_databases() were methods back then
@@ -936,10 +943,6 @@ class TestCookieDomainMiddleware(TestCase):
             self.assertEqual(cookies['a']['domain'], '.app.example.com')
 
 
-if django.VERSION >= (1,7):
-    # Django demands it.
-    # You *will* comply.
-    django.setup() # XXX?
 
 # Run tests with the necessary Django-global fixtures in place.
 # This mimics what `django manage.py test` does.
