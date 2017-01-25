@@ -241,35 +241,9 @@ class DynamicSiteMiddlewareFallbackTest(TestCase):
         self.assertEqual(self.middleware.process_request(request), None)
         self.assertEqual(settings.SITE_ID, site.pk)
 
-    @skipIf(django.VERSION >= (1, 5, 0), "Starting Django 1.5, there are no "
-                                         "function based views.")
-    def test_string_function(self):
-        # Function based
-        settings.MULTISITE_FALLBACK = 'django.views.generic.simple.redirect_to'
-        settings.MULTISITE_FALLBACK_KWARGS = {'url': 'http://example.com/',
-                                              'permanent': False}
-        request = self.factory.get('/')
-        response = self.middleware.process_request(request)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response['Location'],
-                         settings.MULTISITE_FALLBACK_KWARGS['url'])
-
     def test_string_class(self):
         # Class based
         settings.MULTISITE_FALLBACK = 'django.views.generic.base.RedirectView'
-        settings.MULTISITE_FALLBACK_KWARGS = {'url': 'http://example.com/',
-                                              'permanent': False}
-        request = self.factory.get('/')
-        response = self.middleware.process_request(request)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response['Location'],
-                         settings.MULTISITE_FALLBACK_KWARGS['url'])
-
-    @skipIf(django.VERSION >= (1, 5, 0), "Starting Django 1.5, there are no "
-                                         "function based views.")
-    def test_function_view(self):
-        from django.views.generic.simple import redirect_to
-        settings.MULTISITE_FALLBACK = redirect_to
         settings.MULTISITE_FALLBACK_KWARGS = {'url': 'http://example.com/',
                                               'permanent': False}
         request = self.factory.get('/')
