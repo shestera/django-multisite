@@ -37,21 +37,18 @@ from django.core.exceptions import (ImproperlyConfigured, SuspiciousOperation,
 from django.http import Http404, HttpResponse
 from django.test import TestCase
 from django.test.client import RequestFactory as DjangoRequestFactory
-# monkey-patch over version differences in django
 from django.test.utils import setup_test_environment, teardown_test_environment
-if django.VERSION >= (1,10):
-    from django.test.utils import setup_databases, teardown_databases
-elif django.VERSION >= (1,6):
-    # {setup,teardown}_databases() were methods back then
-    # but all they use of their owner is the optins settings verbosity, interactive, keepdb, etc
-    # so we make a mock owner and call the method on it
-    from django.test.runner import setup_databases, DiscoverRunner as _DiscoverRunner
-    def teardown_databases(old_config, verbosity):
-        class O: pass
-        o = _DiscoverRunner()
-        o.verbosity = verbosity
-        o.interactive = True
-        return _DiscoverRunner.teardown_databases(o,old_config)
+from django.test.runner import setup_databases
+from django.test.runner import DiscoverRunner
+def teardown_databases(old_config, verbosity):
+    """
+    Wrap DiscoverRunner.teardown_databases() to a first-class function,
+    like its partner setup_databases()
+    """
+    # The only time teardown_databases() speaks to self is to get
+    # settings: verbosity, interactive, keepdb, etc
+    # and we can fake that with a mock object.
+    return DiscoverRunner(verbosity=verbosity, interactive=interactive).teardown_databases(old_config)
 
 from hacks import use_framework_for_site_cache
 

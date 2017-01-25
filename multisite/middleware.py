@@ -137,11 +137,17 @@ class DynamicSiteMiddleware(object):
         if callable(fallback):
             view = fallback
         else:
-            if django.VERSION > (1,7):
-                view = get_callable(fallback, can_fail=True)
-            else:
+            try:
                 view = get_callable(fallback)
-            if not callable(view):
+                if django.VERSION < (1,8):
+                    # older django's get_callable falls through on error,
+                    # returning the input as output
+                    # which notably is definitely not a callable here
+                    if not callable(view):
+                        raise ImportError()
+            except ImportError:
+                # newer django forces this to be an error, which is tidier.
+                # we rewrite the error to be a bit more helpful to our users.
                 raise ImproperlyConfigured(
                     'settings.MULTISITE_FALLBACK is not callable: %s' %
                     fallback
