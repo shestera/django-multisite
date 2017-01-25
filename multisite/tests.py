@@ -554,8 +554,8 @@ class TestSiteDomain(TestCase):
         self.assertEqual(int(SiteDomain(default=self.domain)), self.site.id)
         self.assertRaises(Site.DoesNotExist,
                           int, SiteDomain(default='invalid'))
-        self.assertRaises(ValueError, SiteDomain, default=None)
-        self.assertRaises(ValueError, SiteDomain, default=1)
+        self.assertRaises(TypeError, SiteDomain, default=None)
+        self.assertRaises(TypeError, SiteDomain, default=1)
 
     def test_deferred_site(self):
         domain = 'example.org'

@@ -132,7 +132,7 @@ class SiteDomain(SiteID):
         that is unset.
         """
         if not isinstance(default, basestring):
-            raise ValueError("%r is not a valid default domain." % default)
+            raise TypeError("%r is not a valid default domain." % default)
         self.default_domain = default
         self.default = None
         self.reset()
