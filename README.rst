@@ -136,3 +136,23 @@ run::
 
 .. _cross-domain cookies: http://en.wikipedia.org/wiki/HTTP_cookie#Domain_and_Path
 .. _Public Suffix List: http://publicsuffix.org/
+
+
+Tests
+-----
+
+Before testing, it is a good idea to set up a virtualenv. This way, the package can
+be tested under different combinations of python and django versions::
+
+    virtualenv .venv
+    . .venv/bin/activate
+
+While in an activated venv, you can pick specific versions of dependencies like this::
+
+    pip install django==1.7
+
+To use a different python version, erase the folder and rebuild with `virtualenv -P`
+
+To run the tests::
+
+    python setup.py test

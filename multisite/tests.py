@@ -1,10 +1,26 @@
+"""
+Tests for django-multisite.
+
+To run this, use:
+$ python -m multisite.tests
+or
+$ python setup.py test
+from the parent directory.
+
+This file uses relative imports and so cannot be run standalone.
+"""
+
 from __future__ import unicode_literals
 
 import os
 import tempfile
+import unittest
 from unittest import skipUnless, skipIf
 import warnings
 
+# this has to be set before (most of) django is loaded or else
+# the imports crash with django.core.exceptions.ImproperlyConfigured
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'test_settings')
 
 import django
 from django.conf import settings
@@ -14,6 +30,21 @@ from django.core.exceptions import (ImproperlyConfigured, SuspiciousOperation,
 from django.http import Http404, HttpResponse
 from django.test import TestCase
 from django.test.client import RequestFactory as DjangoRequestFactory
+# monkey-patch over version differences in django
+from django.test.utils import setup_test_environment, teardown_test_environment
+if django.VERSION >= (1,9):
+    from django.test.utils import setup_databases, teardown_databases
+elif django.VERSION >= (1,6):
+    # {setup,teardown}_databases() were methods back then
+    # but all they use of their owner is the optins settings verbosity, interactive, keepdb, etc
+    # so we make a mock owner and call the method on it
+    from django.test.runner import setup_databases, DiscoverRunner as _DiscoverRunner
+    def teardown_databases(old_config, verbosity):
+        class O: pass
+        o = _DiscoverRunner()
+        o.verbosity = verbosity
+        o.interactive = True
+        return _DiscoverRunner.teardown_databases(o,old_config)
 
 from hacks import use_framework_for_site_cache
 
@@ -903,3 +934,49 @@ class TestCookieDomainMiddleware(TestCase):
             request = self.factory.get('/', host='www.us.app.example.com')
             cookies = middleware.process_response(request, response).cookies
             self.assertEqual(cookies['a']['domain'], '.app.example.com')
+
+
+if django.VERSION >= (1,7):
+    # Django demands it.
+    # You *will* comply.
+    django.setup() # XXX?
+
+# Run tests with the necessary Django-global fixtures in place.
+# This mimics what `django manage.py test` does.
+#
+# Long story: Django screwed up.
+# They put fixture-ish code ({setup,teardown}_{test_environment,databases}())
+# into their test runner (django.test.runner.DiscoverRunner.run_tests(test_labels, extra_tests=None),
+#  where test_labels is a list of strings naming the tests to load
+#  *but can be None to mean 'all tests recursively'*,and extra_tests
+#  is a TestSuite, if given) and then failed to make it API-compatible
+# with unittest's design (.run(tests),
+#  where tests is a single TestCase, or a TestSuite)
+# which means `python setup.py test` can't use it as a test_runner,
+# even if the setuptools people had documented clearly how to (which
+# they haven't: https://packaging.python.org/distributing/#setup-args ?
+# https://setuptools.readthedocs.io/en/latest/setuptools.html#test-build-package-and-run-a-unittest-suite ?)
+#
+# They screwed up so bad that someone went ahead and wrote an entire
+# Django plugin <https://github.com/praekelt/django-setuptest> just
+# so they could say `python setup.py test`.
+#
+# These setUp/tearDown methods crimp the relevant lines from run_tests()
+# so that necessary cruft is in place before trying to run the tests.
+#
+# Why doesn't django.test.TestCase do this in a {setUp,tearDown}Class()?
+
+verbosity = 1
+interactive = True
+
+def setUpModule():
+    global db
+    setup_test_environment()
+    db = setup_databases(verbosity, interactive)
+
+def tearDownModule():
+    teardown_databases(db, verbosity)
+    teardown_test_environment()
+
+if __name__ == '__main__':
+    unittest.main()
