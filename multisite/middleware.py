@@ -8,6 +8,7 @@ try:
 except ImportError:
     from urllib.parse import urlsplit, urlunsplit
 
+import django
 from django.conf import settings
 from django.contrib.sites.models import Site, SITE_CACHE
 from django.core import mail
@@ -136,7 +137,10 @@ class DynamicSiteMiddleware(object):
         if callable(fallback):
             view = fallback
         else:
-            view = get_callable(fallback, can_fail=True)
+            if django.VERSION > (1,7):
+                view = get_callable(fallback, can_fail=True)
+            else:
+                view = get_callable(fallback)
             if not callable(view):
                 raise ImproperlyConfigured(
                     'settings.MULTISITE_FALLBACK is not callable: %s' %
