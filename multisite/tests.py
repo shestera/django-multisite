@@ -11,6 +11,7 @@ This file uses relative imports and so cannot be run standalone.
 """
 
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 import os
 import tempfile
@@ -50,7 +51,7 @@ def teardown_databases(old_config, verbosity):
     # and we can fake that with a mock object.
     return DiscoverRunner(verbosity=verbosity, interactive=interactive).teardown_databases(old_config)
 
-from hacks import use_framework_for_site_cache
+from .hacks import use_framework_for_site_cache
 
 try:
     from django.test.utils import override_settings
