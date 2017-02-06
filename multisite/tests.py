@@ -95,9 +95,21 @@ class TestContribSite(TestCase):
         self.assertEqual(current_site.id, settings.SITE_ID)
 
 
+from django.http import HttpResponse
+from django.conf.urls import url
+
+# Because we are a middleware package, we have no views available to test with easily
+# So create one:
+# (This is only used by test_integration)
+urlpatterns = [
+    url(r'^domain/$', lambda request, *args, **kwargs: HttpResponse(str(Site.objects.get_current())))
+]
+
 @skipUnless(Site._meta.installed,
             'django.contrib.sites is not in settings.INSTALLED_APPS')
 @override_settings(
+    ALLOWED_SITES=['*'],
+    ROOT_URLCONF=__name__, #this means that urlpatterns above is used when .get() is called below.
     SITE_ID=SiteID(default=0),
     CACHE_MULTISITE_ALIAS='multisite',
     CACHES={
@@ -173,6 +185,7 @@ class DynamicSiteMiddlewareTest(TestCase):
         self.assertEqual(settings.SITE_ID, 0)
 
     def test_no_sites(self):
+        # FIXME: this needs to go into its own TestCase since it requires modifying the fixture to work properly
         # Remove all Sites
         Site.objects.all().delete()
         # Make the request
@@ -200,6 +213,19 @@ class DynamicSiteMiddlewareTest(TestCase):
         request = self.factory.get('/path', host=host)
         self.assertEqual(DynamicSiteMiddleware().process_request(request), None)
         self.assertEqual(settings.SITE_ID, self.site.pk)
+
+    def test_integration(self):
+        """
+        Test that the middleware loads and runs properly under settings.MIDDLEWARE.
+        """
+        resp = self.client.get('/domain/', host='example.com')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.content, "example.com")
+
+        resp = self.client.get('/domain/', host='anothersite.example')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.content, "anothersite.example")
+
 
 
 @skipUnless(Site._meta.installed,

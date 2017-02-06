@@ -1,5 +1,6 @@
 import django
 
+SECRET_KEY = "iufoj=mibkpdz*%bob952x(%49rqgv8gg45k36kjcg76&-y5=!"
 
 DATABASES = {
     'default': {
@@ -13,7 +14,36 @@ INSTALLED_APPS = [
     'multisite',
 ]
 
-if django.VERSION[:2] < (1, 6):
+from multisite import SiteID
+SITE_ID = SiteID(default=1)
+
+MIDDLEWARE = [
+    'multisite.middleware.DynamicSiteMiddleware',
+]
+if django.VERSION < (1,10,0):
+    # we are backwards compatible, but the settings file format has changed post-1.10:
+    # https://docs.djangoproject.com/en/1.10/topics/http/middleware/#upgrading-pre-django-1-10-style-middleware
+    MIDDLEWARE_CLASSES = list(MIDDLEWARE)
+    del MIDDLEWARE
+
+# The cache connection to use for django-multisite.
+# Default: 'default'
+CACHE_MULTISITE_ALIAS = 'multisite'
+
+# The cache key prefix that django-multisite should use.
+# Default: '' (Empty string)
+CACHE_MULTISITE_KEY_PREFIX = ''
+
+CACHES = {
+    'multisite': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'TIMEOUT': 60 * 60 * 24,  # 24 hours
+    },
+}
+
+
+if django.VERSION < (1, 6):
+    # FIXME: is this still relevant? are we still supporting this?
+    # See https://github.com/ecometrica/django-multisite/issues/39
     TEST_RUNNER = 'discover_runner.DiscoverRunner'
 
-SECRET_KEY = "iufoj=mibkpdz*%bob952x(%49rqgv8gg45k36kjcg76&-y5=!"
