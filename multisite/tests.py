@@ -311,21 +311,22 @@ class CacheTest(TestCase):
 
     def test_site_domain_changed(self):
         # Test to ensure that the cache is cleared properly
-        cache_key = DynamicSiteMiddleware().get_cache_key(self.host)
-        self.assertEqual(DynamicSiteMiddleware().cache.get(cache_key), None)
+        middleware = DynamicSiteMiddleware()
+        cache_key = middleware.get_cache_key(self.host)
+        self.assertEqual(middleware.cache.get(cache_key), None)
         # Make the request
         request = self.factory.get('/')
-        self.assertEqual(DynamicSiteMiddleware().process_request(request), None)
-        self.assertEqual(DynamicSiteMiddleware().cache.get(cache_key).site_id,
+        self.assertEqual(middleware.process_request(request), None)
+        self.assertEqual(middleware.cache.get(cache_key).site_id,
                          self.site.pk)
         # Change the domain name
         self.site.domain = 'example.org'
         self.site.save()
-        self.assertEqual(DynamicSiteMiddleware().cache.get(cache_key), None)
+        self.assertEqual(middleware.cache.get(cache_key), None)
         # Make the request again, which will now be invalid
         request = self.factory.get('/')
         self.assertRaises(Http404,
-                          DynamicSiteMiddleware().process_request, request)
+                          middleware.process_request, request)
         self.assertEqual(settings.SITE_ID, 0)
 
 
