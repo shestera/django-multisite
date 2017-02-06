@@ -124,6 +124,7 @@ class DynamicSiteMiddlewareTest(TestCase):
 
         Site.objects.all().delete()
         self.site = Site.objects.create(domain=self.host)
+        self.site2 = Site.objects.create(domain='anothersite.example')
 
     def test_valid_domain(self):
         # Make the request
@@ -155,10 +156,9 @@ class DynamicSiteMiddlewareTest(TestCase):
         self.assertEqual(DynamicSiteMiddleware().process_request(request), None)
         self.assertEqual(settings.SITE_ID, self.site.pk)
         # Another request with a different site
-        site2 = Site.objects.create(domain='anothersite.example')
-        request = self.factory.get('/', host=site2.domain)
+        request = self.factory.get('/', host=self.site2.domain)
         self.assertEqual(DynamicSiteMiddleware().process_request(request), None)
-        self.assertEqual(settings.SITE_ID, site2.pk)
+        self.assertEqual(settings.SITE_ID, self.site2.pk)
 
     def test_unknown_host(self):
         # Unknown host
@@ -218,11 +218,11 @@ class DynamicSiteMiddlewareTest(TestCase):
         """
         Test that the middleware loads and runs properly under settings.MIDDLEWARE.
         """
-        resp = self.client.get('/domain/', host='example.com')
+        resp = self.client.get('/domain/', HTTP_HOST=self.host)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.content, "example.com")
 
-        resp = self.client.get('/domain/', host='anothersite.example')
+        resp = self.client.get('/domain/', HTTP_HOST=self.site2.domain)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.content, "anothersite.example")
 
