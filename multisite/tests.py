@@ -113,68 +113,66 @@ class DynamicSiteMiddlewareTest(TestCase):
         Site.objects.all().delete()
         self.site = Site.objects.create(domain=self.host)
 
-        self.middleware = DynamicSiteMiddleware()
-
     def tearDown(self):
         settings.SITE_ID.reset()
 
     def test_valid_domain(self):
         # Make the request
         request = self.factory.get('/')
-        self.assertEqual(self.middleware.process_request(request), None)
+        self.assertEqual(DynamicSiteMiddleware().process_request(request), None)
         self.assertEqual(settings.SITE_ID, self.site.pk)
         # Request again
-        self.assertEqual(self.middleware.process_request(request), None)
+        self.assertEqual(DynamicSiteMiddleware().process_request(request), None)
         self.assertEqual(settings.SITE_ID, self.site.pk)
 
     def test_valid_domain_port(self):
         # Make the request with a specific port
         request = self.factory.get('/', host=self.host + ':8000')
-        self.assertEqual(self.middleware.process_request(request), None)
+        self.assertEqual(DynamicSiteMiddleware().process_request(request), None)
         self.assertEqual(settings.SITE_ID, self.site.pk)
         # Request again
-        self.assertEqual(self.middleware.process_request(request), None)
+        self.assertEqual(DynamicSiteMiddleware().process_request(request), None)
         self.assertEqual(settings.SITE_ID, self.site.pk)
 
     def test_case_sensitivity(self):
         # Make the request in all uppercase
         request = self.factory.get('/', host=self.host.upper())
-        self.assertEqual(self.middleware.process_request(request), None)
+        self.assertEqual(DynamicSiteMiddleware().process_request(request), None)
         self.assertEqual(settings.SITE_ID, self.site.pk)
 
     def test_change_domain(self):
         # Make the request
         request = self.factory.get('/')
-        self.assertEqual(self.middleware.process_request(request), None)
+        self.assertEqual(DynamicSiteMiddleware().process_request(request), None)
         self.assertEqual(settings.SITE_ID, self.site.pk)
         # Another request with a different site
         site2 = Site.objects.create(domain='anothersite.example')
         request = self.factory.get('/', host=site2.domain)
-        self.assertEqual(self.middleware.process_request(request), None)
+        self.assertEqual(DynamicSiteMiddleware().process_request(request), None)
         self.assertEqual(settings.SITE_ID, site2.pk)
 
     def test_unknown_host(self):
         # Unknown host
         request = self.factory.get('/', host='unknown')
         self.assertRaises(Http404,
-                          self.middleware.process_request, request)
+                          DynamicSiteMiddleware().process_request, request)
         self.assertEqual(settings.SITE_ID, 0)
         # Unknown host:port
         request = self.factory.get('/', host='unknown:8000')
         self.assertRaises(Http404,
-                          self.middleware.process_request, request)
+                          DynamicSiteMiddleware().process_request, request)
         self.assertEqual(settings.SITE_ID, 0)
 
     def test_invalid_host(self):
         # Invalid host
         request = self.factory.get('/', host='')
         self.assertRaises(SuspiciousOperation,
-                          self.middleware.process_request, request)
+                          DynamicSiteMiddleware().process_request, request)
         self.assertEqual(settings.SITE_ID, 0)
         # Invalid host:port
         request = self.factory.get('/', host=':8000')
         self.assertRaises(SuspiciousOperation,
-                          self.middleware.process_request, request)
+                          DynamicSiteMiddleware().process_request, request)
         self.assertEqual(settings.SITE_ID, 0)
 
     def test_no_sites(self):
@@ -183,7 +181,7 @@ class DynamicSiteMiddlewareTest(TestCase):
         # Make the request
         request = self.factory.get('/')
         self.assertRaises(Http404,
-                          self.middleware.process_request, request)
+                          DynamicSiteMiddleware().process_request, request)
         self.assertEqual(settings.SITE_ID, 0)
 
     def test_redirect(self):
@@ -192,7 +190,7 @@ class DynamicSiteMiddlewareTest(TestCase):
         self.assertTrue(alias.redirect_to_canonical)
         # Make the request
         request = self.factory.get('/path', host=host)
-        response = self.middleware.process_request(request)
+        response = DynamicSiteMiddleware().process_request(request)
         self.assertEqual(response.status_code, 301)
         self.assertEqual(response['Location'],
                          "http://%s/path" % self.host)
@@ -203,7 +201,7 @@ class DynamicSiteMiddlewareTest(TestCase):
                              redirect_to_canonical=False)
         # Make the request
         request = self.factory.get('/path', host=host)
-        self.assertEqual(self.middleware.process_request(request), None)
+        self.assertEqual(DynamicSiteMiddleware().process_request(request), None)
         self.assertEqual(settings.SITE_ID, self.site.pk)
 
 
@@ -223,22 +221,20 @@ class DynamicSiteMiddlewareFallbackTest(TestCase):
 
         Site.objects.all().delete()
 
-        self.middleware = DynamicSiteMiddleware()
-
     def tearDown(self):
         settings.SITE_ID.reset()
 
     def test_404(self):
         request = self.factory.get('/')
         self.assertRaises(Http404,
-                          self.middleware.process_request, request)
+                          DynamicSiteMiddleware().process_request, request)
         self.assertEqual(settings.SITE_ID, 0)
 
     def test_testserver(self):
         host = 'testserver'
         site = Site.objects.create(domain=host)
         request = self.factory.get('/', host=host)
-        self.assertEqual(self.middleware.process_request(request), None)
+        self.assertEqual(DynamicSiteMiddleware().process_request(request), None)
         self.assertEqual(settings.SITE_ID, site.pk)
 
     def test_string_class(self):
@@ -247,7 +243,7 @@ class DynamicSiteMiddlewareFallbackTest(TestCase):
         settings.MULTISITE_FALLBACK_KWARGS = {'url': 'http://example.com/',
                                               'permanent': False}
         request = self.factory.get('/')
-        response = self.middleware.process_request(request)
+        response = DynamicSiteMiddleware().process_request(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response['Location'],
                          settings.MULTISITE_FALLBACK_KWARGS['url'])
@@ -258,7 +254,7 @@ class DynamicSiteMiddlewareFallbackTest(TestCase):
             url='http://example.com/', permanent=False
         )
         request = self.factory.get('/')
-        response = self.middleware.process_request(request)
+        response = DynamicSiteMiddleware().process_request(request)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response['Location'], 'http://example.com/')
 
@@ -266,7 +262,7 @@ class DynamicSiteMiddlewareFallbackTest(TestCase):
         settings.MULTISITE_FALLBACK = ''
         request = self.factory.get('/')
         self.assertRaises(ImproperlyConfigured,
-                          self.middleware.process_request, request)
+                          DynamicSiteMiddleware().process_request, request)
 
 
 @skipUnless(Site._meta.installed,
@@ -293,25 +289,23 @@ class CacheTest(TestCase):
         Site.objects.all().delete()
         self.site = Site.objects.create(domain=self.host)
 
-        self.middleware = DynamicSiteMiddleware()
-
     def test_site_domain_changed(self):
         # Test to ensure that the cache is cleared properly
-        cache_key = self.middleware.get_cache_key(self.host)
-        self.assertEqual(self.middleware.cache.get(cache_key), None)
+        cache_key = DynamicSiteMiddleware().get_cache_key(self.host)
+        self.assertEqual(DynamicSiteMiddleware().cache.get(cache_key), None)
         # Make the request
         request = self.factory.get('/')
-        self.assertEqual(self.middleware.process_request(request), None)
-        self.assertEqual(self.middleware.cache.get(cache_key).site_id,
+        self.assertEqual(DynamicSiteMiddleware().process_request(request), None)
+        self.assertEqual(DynamicSiteMiddleware().cache.get(cache_key).site_id,
                          self.site.pk)
         # Change the domain name
         self.site.domain = 'example.org'
         self.site.save()
-        self.assertEqual(self.middleware.cache.get(cache_key), None)
+        self.assertEqual(DynamicSiteMiddleware().cache.get(cache_key), None)
         # Make the request again, which will now be invalid
         request = self.factory.get('/')
         self.assertRaises(Http404,
-                          self.middleware.process_request, request)
+                          DynamicSiteMiddleware().process_request, request)
         self.assertEqual(settings.SITE_ID, 0)
 
 
@@ -800,11 +794,10 @@ class AliasTest(TestCase):
 class TestCookieDomainMiddleware(TestCase):
     def setUp(self):
         self.factory = RequestFactory(host='example.com')
-        self.middleware = CookieDomainMiddleware()
 
     def test_init(self):
-        self.assertEqual(self.middleware.depth, 0)
-        self.assertEqual(self.middleware.psl_cache,
+        self.assertEqual(CookieDomainMiddleware().depth, 0)
+        self.assertEqual(CookieDomainMiddleware().psl_cache,
                          os.path.join(tempfile.gettempdir(),
                                       'multisite_tld.dat'))
 
@@ -824,17 +817,17 @@ class TestCookieDomainMiddleware(TestCase):
         # No cookies
         request = self.factory.get('/')
         response = HttpResponse()
-        self.assertEqual(self.middleware.match_cookies(request, response),
+        self.assertEqual(CookieDomainMiddleware().match_cookies(request, response),
                          [])
-        cookies = self.middleware.process_response(request, response).cookies
+        cookies = CookieDomainMiddleware().process_response(request, response).cookies
         self.assertEqual(list(cookies.values()), [])
 
         # Add some cookies with their domains already set
         response.set_cookie(key='a', value='a', domain='.example.org')
         response.set_cookie(key='b', value='b', domain='.example.co.uk')
-        self.assertEqual(self.middleware.match_cookies(request, response),
+        self.assertEqual(CookieDomainMiddleware().match_cookies(request, response),
                          [])
-        cookies = self.middleware.process_response(request, response).cookies
+        cookies = CookieDomainMiddleware().process_response(request, response).cookies
         self.assertEqual(list(cookies.values()), [cookies['a'], cookies['b']])
         self.assertEqual(cookies['a']['domain'], '.example.org')
         self.assertEqual(cookies['b']['domain'], '.example.co.uk')
@@ -843,10 +836,10 @@ class TestCookieDomainMiddleware(TestCase):
         request = self.factory.get('/')
         response = HttpResponse()
         response.set_cookie(key='a', value='a', domain=None)
-        self.assertEqual(self.middleware.match_cookies(request, response),
+        self.assertEqual(CookieDomainMiddleware().match_cookies(request, response),
                          [response.cookies['a']])
         # No new cookies should be introduced
-        cookies = self.middleware.process_response(request, response).cookies
+        cookies = CookieDomainMiddleware().process_response(request, response).cookies
         self.assertEqual(list(cookies.values()), [cookies['a']])
 
     def test_ip_address(self):
@@ -854,7 +847,7 @@ class TestCookieDomainMiddleware(TestCase):
         response.set_cookie(key='a', value='a', domain=None)
         # IP addresses should not be mutated
         request = self.factory.get('/', host='192.0.43.10')
-        cookies = self.middleware.process_response(request, response).cookies
+        cookies = CookieDomainMiddleware().process_response(request, response).cookies
         self.assertEqual(cookies['a']['domain'], '')
 
     def test_localpath(self):
@@ -862,11 +855,11 @@ class TestCookieDomainMiddleware(TestCase):
         response.set_cookie(key='a', value='a', domain=None)
         # Local domains should not be mutated
         request = self.factory.get('/', host='localhost')
-        cookies = self.middleware.process_response(request, response).cookies
+        cookies = CookieDomainMiddleware().process_response(request, response).cookies
         self.assertEqual(cookies['a']['domain'], '')
         # Even local subdomains
         request = self.factory.get('/', host='localhost.localdomain')
-        cookies = self.middleware.process_response(request, response).cookies
+        cookies = CookieDomainMiddleware().process_response(request, response).cookies
         self.assertEqual(cookies['a']['domain'], '')
 
     def test_simple_tld(self):
@@ -874,11 +867,11 @@ class TestCookieDomainMiddleware(TestCase):
         response.set_cookie(key='a', value='a', domain=None)
         # Top-level domains shouldn't get mutated
         request = self.factory.get('/', host='ai')
-        cookies = self.middleware.process_response(request, response).cookies
+        cookies = CookieDomainMiddleware().process_response(request, response).cookies
         self.assertEqual(cookies['a']['domain'], '')
         # Domains inside a TLD are OK
         request = self.factory.get('/', host='www.ai')
-        cookies = self.middleware.process_response(request, response).cookies
+        cookies = CookieDomainMiddleware().process_response(request, response).cookies
         self.assertEqual(cookies['a']['domain'], '.www.ai')
 
     def test_effective_tld(self):
@@ -886,11 +879,11 @@ class TestCookieDomainMiddleware(TestCase):
         response.set_cookie(key='a', value='a', domain=None)
         # Effective top-level domains with a webserver shouldn't get mutated
         request = self.factory.get('/', host='com.ai')
-        cookies = self.middleware.process_response(request, response).cookies
+        cookies = CookieDomainMiddleware().process_response(request, response).cookies
         self.assertEqual(cookies['a']['domain'], '')
         # Domains within an effective TLD are OK
         request = self.factory.get('/', host='nic.com.ai')
-        cookies = self.middleware.process_response(request, response).cookies
+        cookies = CookieDomainMiddleware().process_response(request, response).cookies
         self.assertEqual(cookies['a']['domain'], '.nic.com.ai')
 
     def test_subdomain_depth(self):
