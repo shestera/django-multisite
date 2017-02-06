@@ -5,7 +5,15 @@ Get the code via git::
 
     git clone git://github.com/ecometrica/django-multisite.git django-multisite
 
-Add the django-multisite/multisite folder to your PYTHONPATH.
+Run::
+
+    python setup.py install
+
+Or add the django-multisite/multisite folder to your PYTHONPATH.
+
+If you wish to contribute, instead run::
+
+    python setup.py develop
 
 
 Quickstart
@@ -15,6 +23,15 @@ Replace your SITE_ID in settings.py to::
 
     from multisite import SiteID
     SITE_ID = SiteID(default=1)
+
+Add these to your INSTALLED_APPS::
+
+    INSTALLED_APPS = [
+        ...
+        'django.contrib.sites',
+        'multisite',
+        ...
+    ]
 
 Add to your settings.py TEMPLATES loaders in the OPTIONS section::
 
