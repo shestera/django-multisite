@@ -165,11 +165,15 @@ class DynamicSiteMiddlewareTest(TestCase):
         request = self.factory.get('/', host='unknown')
         self.assertRaises(Http404,
                           DynamicSiteMiddleware().process_request, request)
+        # The middleware resets SiteID to its default value, as given above, on error.
         self.assertEqual(settings.SITE_ID, 0)
+
+    def test_unknown_hostport(self):
         # Unknown host:port
         request = self.factory.get('/', host='unknown:8000')
         self.assertRaises(Http404,
                           DynamicSiteMiddleware().process_request, request)
+        # The middleware resets SiteID to its default value, as given above, on error.
         self.assertEqual(settings.SITE_ID, 0)
 
     def test_invalid_host(self):
@@ -177,11 +181,16 @@ class DynamicSiteMiddlewareTest(TestCase):
         request = self.factory.get('/', host='')
         self.assertRaises(SuspiciousOperation,
                           DynamicSiteMiddleware().process_request, request)
+        # The middleware resets SiteID to its default value, as given above, on error.
         self.assertEqual(settings.SITE_ID, 0)
+
+
+    def test_invalid_hostport(self):
         # Invalid host:port
         request = self.factory.get('/', host=':8000')
         self.assertRaises(SuspiciousOperation,
                           DynamicSiteMiddleware().process_request, request)
+        # The middleware resets SiteID to its default value, as given above, on error.
         self.assertEqual(settings.SITE_ID, 0)
 
     def test_no_sites(self):
@@ -192,6 +201,7 @@ class DynamicSiteMiddlewareTest(TestCase):
         request = self.factory.get('/')
         self.assertRaises(Http404,
                           DynamicSiteMiddleware().process_request, request)
+        # The middleware resets SiteID to its default value, as given above, on error.
         self.assertEqual(settings.SITE_ID, 0)
 
     def test_redirect(self):
@@ -220,11 +230,13 @@ class DynamicSiteMiddlewareTest(TestCase):
         """
         resp = self.client.get('/domain/', HTTP_HOST=self.host)
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.content, "example.com")
+        self.assertEqual(resp.content, self.site.domain)
+        self.assertEqual(settings.SITE_ID, self.site.pk)
 
         resp = self.client.get('/domain/', HTTP_HOST=self.site2.domain)
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.content, "anothersite.example")
+        self.assertEqual(resp.content, self.site2.domain)
+        self.assertEqual(settings.SITE_ID, self.site2.pk)
 
 
 
