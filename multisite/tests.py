@@ -113,9 +113,6 @@ class DynamicSiteMiddlewareTest(TestCase):
         Site.objects.all().delete()
         self.site = Site.objects.create(domain=self.host)
 
-    def tearDown(self):
-        settings.SITE_ID.reset()
-
     def test_valid_domain(self):
         # Make the request
         request = self.factory.get('/')
@@ -220,9 +217,6 @@ class DynamicSiteMiddlewareFallbackTest(TestCase):
         self.factory = RequestFactory(host='unknown')
 
         Site.objects.all().delete()
-
-    def tearDown(self):
-        settings.SITE_ID.reset()
 
     def test_404(self):
         request = self.factory.get('/')
@@ -935,7 +929,8 @@ class TestCookieDomainMiddleware(TestCase):
 # These setUp/tearDown methods crimp the relevant lines from run_tests()
 # so that necessary cruft is in place before trying to run the tests.
 #
-# Why doesn't django.test.TestCase do this in a {setUp,tearDown}Class()?
+# Why doesn't django.test.TestCase do this in a {setUp,tearDown}Class(),
+# but instead expects that you'll use their `manage.py test` runner?
 
 verbosity = 1
 interactive = True
