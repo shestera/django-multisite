@@ -28,14 +28,15 @@ if django.VERSION < (1,10,0):
 
 # The cache connection to use for django-multisite.
 # Default: 'default'
-CACHE_MULTISITE_ALIAS = 'multisite'
+CACHE_MULTISITE_ALIAS = 'default'
 
 # The cache key prefix that django-multisite should use.
 # Default: '' (Empty string)
 CACHE_MULTISITE_KEY_PREFIX = ''
 
+# FIXME: made redundant by override_settings in some of the tests; this should be harmonized.
 CACHES = {
-    'multisite': {
+    'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'TIMEOUT': 60 * 60 * 24,  # 24 hours
     },
