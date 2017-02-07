@@ -181,17 +181,12 @@ class DynamicSiteMiddlewareTest(TestCase):
         request = self.factory.get('/', host='')
         self.assertRaises(SuspiciousOperation,
                           DynamicSiteMiddleware().process_request, request)
-        # The middleware resets SiteID to its default value, as given above, on error.
-        self.assertEqual(settings.SITE_ID, 0)
-
 
     def test_invalid_hostport(self):
         # Invalid host:port
         request = self.factory.get('/', host=':8000')
         self.assertRaises(SuspiciousOperation,
                           DynamicSiteMiddleware().process_request, request)
-        # The middleware resets SiteID to its default value, as given above, on error.
-        self.assertEqual(settings.SITE_ID, 0)
 
     def test_no_sites(self):
         # FIXME: this needs to go into its own TestCase since it requires modifying the fixture to work properly
