@@ -440,8 +440,7 @@ class SiteCacheTest(TestCase):
             self.cache._cache._get_cache_key(self.site.id),
             'sites.{}.{}'.format(
                 settings.CACHES['default']['KEY_PREFIX'], self.site.id
-            ),
-            self.cache._cache._get_cache_key(self.site.id)
+            )
         )
 
     @override_settings(
