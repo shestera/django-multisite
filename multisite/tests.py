@@ -425,12 +425,6 @@ class SiteCacheTest(TestCase):
             self.cache._cache._get_cache_key(self.site.id)
         )
 
-    @override_settings(
-       CACHES={'default': {
-                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-                'KEY_PREFIX': 'test1'
-       }}
-    )
     def test_default_key_prefix(self):
         """
         If CACHE_MULTISITE_KEY_PREFIX is undefined,
@@ -442,18 +436,12 @@ class SiteCacheTest(TestCase):
         self.assertEqual(self.cache[self.site.id], self.site)
         self.assertEqual(
             self.cache._cache._get_cache_key(self.site.id),
-            'sites.{}.{}'.format(
-                settings.CACHES['default']['KEY_PREFIX'], self.site.id
-            )
+            "sites.looselycoupled.2", # FIXME: this 2 is not stable
         )
 
     @override_settings(
-       CACHE_MULTISITE_KEY_PREFIX="__test__",
-       CACHES={'default': {
-                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-                'KEY_PREFIX': 'test1'
-       }}
-    )
+        CACHE_MULTISITE_KEY_PREFIX="virtuouslyvirtual",
+        )
     def test_multisite_key_prefix_takes_priority_over_default(self):
         self._initialize_cache()
         # Populate cache
@@ -461,10 +449,7 @@ class SiteCacheTest(TestCase):
         self.assertEqual(self.cache[self.site.id], self.site)
         self.assertEqual(
             self.cache._cache._get_cache_key(self.site.id),
-            'sites.{}.{}'.format(
-                settings.CACHE_MULTISITE_KEY_PREFIX, self.site.id
-            ),
-            self.cache._cache._get_cache_key(self.site.id)
+            "sites.virtuouslyvirtual.2", # FIXME: this 2 is not stable
         )
 
 

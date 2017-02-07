@@ -28,19 +28,18 @@ if django.VERSION < (1,10,0):
 
 # The cache connection to use for django-multisite.
 # Default: 'default'
-CACHE_MULTISITE_ALIAS = 'default'
+CACHE_MULTISITE_ALIAS = 'test_multisite'
 
-# FIXME: this breaks test_default_key_prefix
-# see https://github.com/ecometrica/django-multisite/issues/43
 ## The cache key prefix that django-multisite should use.
-## Default: '' (Empty string)
+# This has to be unset for the tests as currently written to test it.
 #CACHE_MULTISITE_KEY_PREFIX = ''
 
 # FIXME: made redundant by override_settings in some of the tests; this should be harmonized.
 CACHES = {
-    'default': {
+    CACHE_MULTISITE_ALIAS: {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'TIMEOUT': 60 * 60 * 24,  # 24 hours
+        'KEY_PREFIX': 'looselycoupled',
     },
 }
 
