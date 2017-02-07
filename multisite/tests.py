@@ -432,6 +432,10 @@ class SiteCacheTest(TestCase):
        }}
     )
     def test_default_key_prefix(self):
+        """
+        If CACHE_MULTISITE_KEY_PREFIX is undefined,
+        the caching system should use CACHES[current]['KEY_PREFIX'].
+        """
         self._initialize_cache()
         # Populate cache
         self.assertEqual(Site.objects.get_current(), self.site)

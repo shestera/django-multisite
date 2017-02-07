@@ -30,9 +30,11 @@ if django.VERSION < (1,10,0):
 # Default: 'default'
 CACHE_MULTISITE_ALIAS = 'default'
 
-# The cache key prefix that django-multisite should use.
-# Default: '' (Empty string)
-CACHE_MULTISITE_KEY_PREFIX = ''
+# FIXME: this breaks test_default_key_prefix
+# see https://github.com/ecometrica/django-multisite/issues/43
+## The cache key prefix that django-multisite should use.
+## Default: '' (Empty string)
+#CACHE_MULTISITE_KEY_PREFIX = ''
 
 # FIXME: made redundant by override_settings in some of the tests; this should be harmonized.
 CACHES = {
