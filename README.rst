@@ -1,5 +1,5 @@
-.. image:: https://travis-ci.org/rebkwok/django-multisite.svg?branch=master
-    :target: https://travis-ci.org/rebkwok/django-multisite
+.. image:: https://travis-ci.org/ecometrica/django-multisite.svg?branch=master
+    :target: https://travis-ci.org/ecometrica/django-multisite
 
 README
 ======
@@ -77,7 +77,8 @@ safely cleared::
     CACHE_MULTISITE_ALIAS = 'multisite'
     
     # The cache key prefix that django-multisite should use.
-    # Default: '' (Empty string)
+    # If not set, defaults to the KEY_PREFIX used in the defined
+    # CACHE_MULTISITE_ALIAS or the default cache (empty string if not set)
     CACHE_MULTISITE_KEY_PREFIX = ''
 
 If you have set CACHE\_MULTISITE\_ALIAS to a custom value, *e.g.*

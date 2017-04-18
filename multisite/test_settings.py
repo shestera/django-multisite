@@ -29,15 +29,11 @@ if django.VERSION < (1,10,0):
     del MIDDLEWARE
 
 # The cache connection to use for django-multisite.
-# Default: 'default'
 CACHE_MULTISITE_ALIAS = 'test_multisite'
 
-## The cache key prefix that django-multisite should use.
-# This has to be unset for the tests as currently written to test it.
-#CACHE_MULTISITE_KEY_PREFIX = ''
-
 CACHES = {
-    'default': {'BACKEND': 'django.core.cache.backends.dummy.DummyCache'}, # required for Django <= 1.8
+    # default cache required for Django <= 1.8
+    'default': {'BACKEND': 'django.core.cache.backends.dummy.DummyCache'},
     CACHE_MULTISITE_ALIAS: {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'TIMEOUT': 60 * 60 * 24,  # 24 hours
@@ -49,7 +45,7 @@ CACHES = {
 if django.VERSION < (1, 8):
     TEMPLATE_LOADERS = ['multisite.template.loaders.filesystem.Loader']
     TEMPLATE_DIRS = [os.path.join(os.path.abspath(os.path.dirname(__file__)),
-                             'test_templates')]
+                                  'test_templates')]
 else:
    TEMPLATES=[
         {
@@ -64,7 +60,7 @@ else:
                 ]
             },
         }
-]
+    ]
 
 
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
