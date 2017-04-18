@@ -12,6 +12,7 @@ except ImportError:
 import django
 from django.conf import settings
 from django.contrib.sites.models import Site, SITE_CACHE
+from django.core.exceptions import DisallowedHost
 from django.core import mail
 
 try:
@@ -178,7 +179,12 @@ class DynamicSiteMiddleware(MiddlewareMixin):
         return HttpResponsePermanentRedirect(url)
 
     def process_request(self, request):
-        netloc = request.get_host().lower()
+        try:
+            netloc = request.get_host().lower()
+        except DisallowedHost:
+            settings.SITE_ID.reset()
+            return self.fallback_view(request)
+
         cache_key = self.get_cache_key(netloc)
 
         # Find the Alias in the cache
