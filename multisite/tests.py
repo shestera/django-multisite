@@ -13,19 +13,20 @@ This file uses relative imports and so cannot be run standalone.
 from __future__ import unicode_literals
 from __future__ import absolute_import
 
+import django
 import pytest
 import sys
 import os
 import tempfile
-from unittest import skipUnless, skipIf
+from unittest import skipUnless
 import warnings
 
 from django.conf import settings
 
 from django.contrib.sites.models import Site
-from django.core.exceptions import (ImproperlyConfigured, SuspiciousOperation,
-                                    ValidationError)
-from django.http import Http404, HttpResponse
+from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.http import Http404
+from django.template.loader import get_template
 from django.test import TestCase
 from django.test.client import RequestFactory as DjangoRequestFactory
 
@@ -36,7 +37,7 @@ try:
 except ImportError:
     from override_settings import override_settings
 
-from . import SiteDomain, SiteID, threadlocals
+from multisite import SiteDomain, SiteID, threadlocals
 from .hosts import ALLOWED_HOSTS
 from .middleware import CookieDomainMiddleware, DynamicSiteMiddleware
 from .models import Alias
@@ -95,6 +96,7 @@ urlpatterns = [
         'multisite': {'BACKEND': 'django.core.cache.backends.dummy.DummyCache'}
     },
     MULTISITE_FALLBACK=None,
+    ALLOWED_HOSTS=ALLOWED_HOSTS
 )
 class DynamicSiteMiddlewareTest(TestCase):
     def setUp(self):
@@ -142,30 +144,30 @@ class DynamicSiteMiddlewareTest(TestCase):
     def test_unknown_host(self):
         # Unknown host
         request = self.factory.get('/', host='unknown')
-        self.assertRaises(Http404,
-                          DynamicSiteMiddleware().process_request, request)
+        with self.assertRaises(Http404):
+            DynamicSiteMiddleware().process_request(request)
         # The middleware resets SiteID to its default value, as given above, on error.
         self.assertEqual(settings.SITE_ID, 0)
 
     def test_unknown_hostport(self):
         # Unknown host:port
         request = self.factory.get('/', host='unknown:8000')
-        self.assertRaises(Http404,
-                          DynamicSiteMiddleware().process_request, request)
+        with self.assertRaises(Http404):
+            DynamicSiteMiddleware().process_request(request)
         # The middleware resets SiteID to its default value, as given above, on error.
         self.assertEqual(settings.SITE_ID, 0)
 
     def test_invalid_host(self):
         # Invalid host
         request = self.factory.get('/', host='')
-        self.assertRaises(SuspiciousOperation,
-                          DynamicSiteMiddleware().process_request, request)
+        with self.assertRaises(Http404):
+            DynamicSiteMiddleware().process_request(request)
 
     def test_invalid_hostport(self):
         # Invalid host:port
         request = self.factory.get('/', host=':8000')
-        self.assertRaises(SuspiciousOperation,
-                          DynamicSiteMiddleware().process_request, request)
+        with self.assertRaises(Http404):
+            DynamicSiteMiddleware().process_request(request)
 
     def test_no_sites(self):
         # FIXME: this needs to go into its own TestCase since it requires modifying the fixture to work properly
@@ -204,12 +206,12 @@ class DynamicSiteMiddlewareTest(TestCase):
         """
         resp = self.client.get('/domain/', HTTP_HOST=self.host)
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.content, self.site.domain)
+        self.assertContains(resp, self.site.domain)
         self.assertEqual(settings.SITE_ID, self.site.pk)
 
         resp = self.client.get('/domain/', HTTP_HOST=self.site2.domain)
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.content, self.site2.domain)
+        self.assertContains(resp, self.site2.domain)
         self.assertEqual(settings.SITE_ID, self.site2.pk)
 
 
@@ -288,6 +290,7 @@ class DynamicSiteMiddlewareSettingsTest(TestCase):
         'multisite': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}
     },
     MULTISITE_FALLBACK=None,
+    ALLOWED_HOSTS=ALLOWED_HOSTS
 )
 class CacheTest(TestCase):
     def setUp(self):
@@ -605,8 +608,6 @@ class AliasTest(TestCase):
             domain=site1.domain, site=site1, is_canonical=False
         )
 
-    # FIXME
-    @skipIf(sys.version_info.major == 3, "For some reason Django repr's this to <Alias Alias object> under python3")
     def test_repr(self):
         site = Site.objects.create(domain='example.com')
         self.assertEqual(repr(Alias.objects.get(site=site)),
@@ -794,11 +795,19 @@ class AliasTest(TestCase):
 @override_settings(
     MULTISITE_COOKIE_DOMAIN_DEPTH=0,
     MULTISITE_PUBLIC_SUFFIX_LIST_CACHE=None,
+    ALLOWED_HOSTS=ALLOWED_HOSTS
 )
 class TestCookieDomainMiddleware(TestCase):
 
     def setUp(self):
         self.factory = RequestFactory(host='example.com')
+        Site.objects.all().delete()
+        # create sites so we populate ALLOWED_HOSTS
+        Site.objects.create(domain='example.com')
+        Site.objects.create(domain='test.example.com')
+        Site.objects.create(domain='app.test1.example.com')
+        Site.objects.create(domain='app.test2.example.com')
+        Site.objects.create(domain='new.app.test3.example.com')
 
     def test_init(self):
         self.assertEqual(CookieDomainMiddleware().depth, 0)
@@ -833,7 +842,15 @@ class TestCookieDomainMiddleware(TestCase):
         self.assertEqual(CookieDomainMiddleware().match_cookies(request, response),
                          [])
         cookies = CookieDomainMiddleware().process_response(request, response).cookies
-        self.assertEqual(list(cookies.values()), [cookies['a'], cookies['b']])
+
+        if sys.version_info.major < 3:  # for testing under Python 2.X
+            self.assertItemsEqual(
+                list(cookies.values()), [cookies['a'], cookies['b']]
+            )
+        else:
+            self.assertCountEqual(
+                list(cookies.values()), [cookies['a'], cookies['b']]
+            )
         self.assertEqual(cookies['a']['domain'], '.example.org')
         self.assertEqual(cookies['b']['domain'], '.example.co.uk')
 
@@ -850,51 +867,69 @@ class TestCookieDomainMiddleware(TestCase):
     def test_ip_address(self):
         response = HttpResponse()
         response.set_cookie(key='a', value='a', domain=None)
+        allowed = [host for host in ALLOWED_HOSTS] + ['192.0.43.10']
         # IP addresses should not be mutated
-        request = self.factory.get('/', host='192.0.43.10')
-        cookies = CookieDomainMiddleware().process_response(request, response).cookies
+        with override_settings(ALLOWED_HOSTS=allowed):
+            request = self.factory.get('/', host='192.0.43.10')
+            cookies = CookieDomainMiddleware().process_response(request, response).cookies
         self.assertEqual(cookies['a']['domain'], '')
 
     def test_localpath(self):
         response = HttpResponse()
         response.set_cookie(key='a', value='a', domain=None)
-        # Local domains should not be mutated
-        request = self.factory.get('/', host='localhost')
-        cookies = CookieDomainMiddleware().process_response(request, response).cookies
-        self.assertEqual(cookies['a']['domain'], '')
-        # Even local subdomains
-        request = self.factory.get('/', host='localhost.localdomain')
-        cookies = CookieDomainMiddleware().process_response(request, response).cookies
+
+        allowed = [host for host in ALLOWED_HOSTS] + \
+                  ['localhost', 'localhost.localdomain']
+        with override_settings(ALLOWED_HOSTS=allowed):
+            # Local domains should not be mutated
+            request = self.factory.get('/', host='localhost')
+            cookies = CookieDomainMiddleware().process_response(request, response).cookies
+            self.assertEqual(cookies['a']['domain'], '')
+            # Even local subdomains
+            request = self.factory.get('/', host='localhost.localdomain')
+            cookies = CookieDomainMiddleware().process_response(request, response).cookies
         self.assertEqual(cookies['a']['domain'], '')
 
     def test_simple_tld(self):
         response = HttpResponse()
         response.set_cookie(key='a', value='a', domain=None)
-        # Top-level domains shouldn't get mutated
-        request = self.factory.get('/', host='ai')
-        cookies = CookieDomainMiddleware().process_response(request, response).cookies
-        self.assertEqual(cookies['a']['domain'], '')
-        # Domains inside a TLD are OK
-        request = self.factory.get('/', host='www.ai')
-        cookies = CookieDomainMiddleware().process_response(request, response).cookies
+
+        allowed = [host for host in ALLOWED_HOSTS] + \
+                  ['ai', 'www.ai']
+        with override_settings(ALLOWED_HOSTS=allowed):
+            # Top-level domains shouldn't get mutated
+            request = self.factory.get('/', host='ai')
+            cookies = CookieDomainMiddleware().process_response(request, response).cookies
+            self.assertEqual(cookies['a']['domain'], '')
+            # Domains inside a TLD are OK
+            request = self.factory.get('/', host='www.ai')
+            cookies = CookieDomainMiddleware().process_response(request, response).cookies
         self.assertEqual(cookies['a']['domain'], '.www.ai')
 
     def test_effective_tld(self):
         response = HttpResponse()
         response.set_cookie(key='a', value='a', domain=None)
-        # Effective top-level domains with a webserver shouldn't get mutated
-        request = self.factory.get('/', host='com.ai')
-        cookies = CookieDomainMiddleware().process_response(request, response).cookies
-        self.assertEqual(cookies['a']['domain'], '')
-        # Domains within an effective TLD are OK
-        request = self.factory.get('/', host='nic.com.ai')
-        cookies = CookieDomainMiddleware().process_response(request, response).cookies
+
+        allowed = [host for host in ALLOWED_HOSTS] + \
+                  ['com.ai', 'nic.com.ai']
+        with override_settings(ALLOWED_HOSTS=allowed):
+            # Effective top-level domains with a webserver shouldn't get mutated
+            request = self.factory.get('/', host='com.ai')
+            cookies = CookieDomainMiddleware().process_response(request, response).cookies
+            self.assertEqual(cookies['a']['domain'], '')
+            # Domains within an effective TLD are OK
+            request = self.factory.get('/', host='nic.com.ai')
+            cookies = CookieDomainMiddleware().process_response(request, response).cookies
         self.assertEqual(cookies['a']['domain'], '.nic.com.ai')
 
     def test_subdomain_depth(self):
         response = HttpResponse()
         response.set_cookie(key='a', value='a', domain=None)
-        with override_settings(MULTISITE_COOKIE_DOMAIN_DEPTH=1):
+
+        allowed = [host for host in ALLOWED_HOSTS] + ['com']
+        with override_settings(
+                MULTISITE_COOKIE_DOMAIN_DEPTH=1, ALLOWED_HOSTS=allowed
+        ):
             # At depth 1:
             middleware = CookieDomainMiddleware()
             # Top-level domains are ignored
@@ -906,11 +941,48 @@ class TestCookieDomainMiddleware(TestCase):
             cookies = middleware.process_response(request, response).cookies
             self.assertEqual(cookies['a']['domain'], '')
             # But subdomains will get matched
-            request = self.factory.get('/', host='www.example.com')
+            request = self.factory.get('/', host='test.example.com')
             cookies = middleware.process_response(request, response).cookies
-            self.assertEqual(cookies['a']['domain'], '.www.example.com')
-            # And sub-subdomains will get matched
+            self.assertEqual(cookies['a']['domain'], '.test.example.com')
+            # And sub-subdomains will get matched to 1 level deep
             cookies['a']['domain'] = ''
-            request = self.factory.get('/', host='www.us.app.example.com')
+            request = self.factory.get('/', host='app.test1.example.com')
             cookies = middleware.process_response(request, response).cookies
-            self.assertEqual(cookies['a']['domain'], '.app.example.com')
+            self.assertEqual(cookies['a']['domain'], '.test1.example.com')
+
+    def test_subdomain_depth_2(self):
+        response = HttpResponse()
+        response.set_cookie(key='a', value='a', domain=None)
+        with override_settings(MULTISITE_COOKIE_DOMAIN_DEPTH=2):
+            # At MULTISITE_COOKIE_DOMAIN_DEPTH 2, subdomains are matched to
+            # 2 levels deep
+            middleware = CookieDomainMiddleware()
+            request = self.factory.get('/', host='app.test2.example.com')
+            cookies = middleware.process_response(request, response).cookies
+            self.assertEqual(cookies['a']['domain'], '.app.test2.example.com')
+            cookies['a']['domain'] = ''
+            request = self.factory.get('/', host='new.app.test3.example.com')
+            cookies = middleware.process_response(request, response).cookies
+            self.assertEqual(cookies['a']['domain'], '.app.test3.example.com')
+
+
+@override_settings(MULTISITE_DEFAULT_TEMPLATE_DIR='multisite_templates')
+class TemplateLoaderTests(TestCase):
+
+    def test_get_template_multisite_default_dir(self):
+        template = get_template("test.html")
+        if django.VERSION < (1, 8):  # <1.7 render() requires Context instance
+            from django.template.context import Context
+            self.assertEqual(template.render(context=Context()), "Test!")
+        else:
+            self.assertEqual(template.render(), "Test!")
+
+    def test_domain_template(self):
+        template = get_template("example.html")
+        if django.VERSION < (1, 8):  # <1.7 render() requires Context instance
+            from django.template.context import Context
+            self.assertEqual(
+                template.render(context=Context()), "Test example.com template"
+            )
+        else:
+            self.assertEqual(template.render(), "Test example.com template")

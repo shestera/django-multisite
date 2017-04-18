@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 import os
 
 _dir_ = os.path.dirname(__file__)
@@ -10,6 +10,8 @@ def long_description():
         return f.read()
 
 
+files = ["multisite/test_templates/*"]
+
 setup(name='django-multisite',
       version='1.4.0',
       description='Serve multiple sites from a single Django application',
@@ -19,16 +21,13 @@ setup(name='django-multisite',
       maintainer='Ecometrica',
       maintainer_email='dev@ecometrica.com',
       url='http://github.com/ecometrica/django-multisite',
-      packages=['multisite',
-                'multisite.management',
-                'multisite.management.commands',
-                'multisite.migrations',
-                'multisite.template',
-                'multisite.template.loaders'],
+      packages=find_packages(),
+      include_package_data=True,
+      package_data={'multisite': files},
       install_requires=['Django>=1.6',
                         'tldextract>=1.2'],
       setup_requires=['pytest-runner'],
-      tests_require=['pytest', 'pytest-django'],
+      tests_require=['pytest', 'pytest-django', 'pytest-pythonpath', 'tox'],
       test_suite="multisite.tests",
       classifiers=['Development Status :: 4 - Beta',
                    'Environment :: Web Environment',
@@ -37,9 +36,11 @@ setup(name='django-multisite',
                    'License :: OSI Approved :: BSD License',
                    'Operating System :: OS Independent',
                    'Programming Language :: Python',
-                   'Programming Language :: Python :: 2.6',
                    'Programming Language :: Python :: 2.7',
                    'Programming Language :: Python :: 3.3',
+                   'Programming Language :: Python :: 3.4',
+                   'Programming Language :: Python :: 3.5',
+                   'Programming Language :: Python :: 3.6',
                    'Topic :: Internet',
                    'Topic :: Internet :: WWW/HTTP',
                    'Topic :: Software Development :: Libraries',

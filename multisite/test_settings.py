@@ -1,4 +1,6 @@
 import django
+import os
+from multisite import SiteID
 
 SECRET_KEY = "iufoj=mibkpdz*%bob952x(%49rqgv8gg45k36kjcg76&-y5=!"
 
@@ -14,7 +16,7 @@ INSTALLED_APPS = [
     'multisite',
 ]
 
-from multisite import SiteID
+
 SITE_ID = SiteID(default=1)
 
 MIDDLEWARE = [
@@ -34,8 +36,8 @@ CACHE_MULTISITE_ALIAS = 'test_multisite'
 # This has to be unset for the tests as currently written to test it.
 #CACHE_MULTISITE_KEY_PREFIX = ''
 
-# FIXME: made redundant by override_settings in some of the tests; this should be harmonized.
 CACHES = {
+    'default': {'BACKEND': 'django.core.cache.backends.dummy.DummyCache'}, # required for Django <= 1.8
     CACHE_MULTISITE_ALIAS: {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'TIMEOUT': 60 * 60 * 24,  # 24 hours
@@ -44,8 +46,25 @@ CACHES = {
 }
 
 
-if django.VERSION < (1, 6):
-    # FIXME: is this still relevant? are we still supporting this?
-    # See https://github.com/ecometrica/django-multisite/issues/39
-    TEST_RUNNER = 'discover_runner.DiscoverRunner'
+if django.VERSION < (1, 8):
+    TEMPLATE_LOADERS = ['multisite.template.loaders.filesystem.Loader']
+    TEMPLATE_DIRS = [os.path.join(os.path.abspath(os.path.dirname(__file__)),
+                             'test_templates')]
+else:
+   TEMPLATES=[
+        {
+            'BACKEND': 'django.template.backends.django.DjangoTemplates',
+            'DIRS': [
+                os.path.join(os.path.abspath(os.path.dirname(__file__)),
+                             'test_templates')
+            ],
+            'OPTIONS': {
+                'loaders': [
+                    'multisite.template.loaders.filesystem.Loader',
+                ]
+            },
+        }
+]
 
+
+TEST_RUNNER = 'django.test.runner.DiscoverRunner'

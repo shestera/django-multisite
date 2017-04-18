@@ -31,7 +31,13 @@ except ImportError:
     MiddlewareMixin = object
 
 from django.core.exceptions import ImproperlyConfigured
-from django.core.urlresolvers import get_callable
+
+try:
+    from django.urls import get_callable
+except ImportError:
+    # Django < 1.10 compatibility
+    from django.core.urlresolvers import get_callable
+
 from django.db.models.signals import pre_save, post_delete, post_init
 from django.http import Http404, HttpResponsePermanentRedirect
 

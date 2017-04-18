@@ -1,3 +1,6 @@
+.. image:: https://travis-ci.org/rebkwok/django-multisite.svg?branch=master
+    :target: https://travis-ci.org/rebkwok/django-multisite
+
 README
 ======
 
@@ -39,9 +42,10 @@ Add to your settings.py TEMPLATES loaders in the OPTIONS section::
         ...
         {
             ...
+            'DIRS': {...}
             'OPTIONS': {
                 'loaders': (
-                    'multisite.template_loader.Loader',
+                    'multisite.template.loaders.filesystem.Loader',
                     'django.template.loaders.app_directories.Loader',
                 )
             }
@@ -53,7 +57,7 @@ Add to your settings.py TEMPLATES loaders in the OPTIONS section::
 Or for Django 1.7 and earlier, add to settings.py TEMPLATES_LOADERS::
 
     TEMPLATE_LOADERS = ( 
-        'multisite.template_loader.Loader',
+        'multisite.template.loaders.filesystem.Loader',
         'django.template.loaders.app_directories.Loader',
     ) 
 
@@ -109,10 +113,21 @@ settings.py::
     MULTISITE_FALLBACK_KWARGS = {'url': 'http://example.com/',
                                  'permanent': False}
 
-Create a directory settings.TEMPLATE_DIRS directory with the names of
+Templates
+---------
+If required, create template subdirectories for domain level templates (in a
+location specified in settings.TEMPLATES['DIRS'], or in settings.TEMPLATE_DIRS
+for Django <=1.7).
+
+Multisite's template loader will look for templates in folders with the names of
 domains, such as::
 
-    mkdir templates/example.com
+    templates/example.com
+
+
+The template loader will also look for templates in a folder specified by the
+optional MULTISITE_DEFAULT_TEMPLATE_DIR setting, e.g.::
+    templates/multisite_templates
 
 
 Cross-domain cookies
@@ -160,17 +175,12 @@ To run the tests::
 
     python setup.py test
 
-Before deploying a change, to verify it has not broken anything you should run::
+Or::
 
-    test_versions
+    pytest
 
-This runs the tests under every supported combination of Django and Python,
-isolated by creating virtualenvs. If a test breaks, it will quit, with the
-virtualenv intact in .venv-python2, or .venv-python3, depending on what broke. 
-You can investigate the broken version manually with::
+Before deploying a change, to verify it has not broken anything by running::
 
-    . .venv-python2/bin/activate  # or .venv-python3
-    python setup.py test
+    tox
 
-(of course, as new versions are supported and old are retired,
-please keep test_versions up to date)
+This runs the tests under every supported combination of Django and Python.
