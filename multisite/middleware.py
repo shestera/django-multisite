@@ -15,14 +15,7 @@ from django.contrib.sites.models import Site, SITE_CACHE
 from django.core.exceptions import DisallowedHost
 from django.core import mail
 
-try:
-    from django.core.cache import caches
-except ImportError:
-    # Django < 1.7 compatibility
-    from django.core.cache import get_cache
-else:
-    def get_cache(cache_alias):
-        return caches[cache_alias]
+from django.core.cache import caches
 
 try:
     # Django > 1.10 uses MiddlewareMixin
@@ -41,14 +34,13 @@ except ImportError:
 from django.db.models.signals import pre_save, post_delete, post_init
 from django.http import Http404, HttpResponsePermanentRedirect
 
-try:
-    # Deprecated in Django 1.5
-    from django.utils.hashcompat import md5_constructor
-except ImportError:
-    # The above has been removed in Django 1.6
-    from hashlib import md5 as md5_constructor
+from hashlib import md5 as md5_constructor
 
 from .models import Alias
+
+
+def get_cache(cache_alias):
+    return caches[cache_alias]
 
 
 class DynamicSiteMiddleware(MiddlewareMixin):
