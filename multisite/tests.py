@@ -13,25 +13,14 @@ This file uses relative imports and so cannot be run standalone.
 from __future__ import unicode_literals
 from __future__ import absolute_import
 
+import pytest
 import sys
 import os
 import tempfile
-import unittest
 from unittest import skipUnless, skipIf
 import warnings
 
-
-import django
 from django.conf import settings
-
-# this has to be set before (most of) django is loaded or else
-# the imports crash with django.core.exceptions.ImproperlyConfigured
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'multisite.test_settings')
-
-if django.VERSION >= (1,7):
-    # Django demands it.
-    # You *will* comply.
-    django.setup()
 
 from django.contrib.sites.models import Site
 from django.core.exceptions import (ImproperlyConfigured, SuspiciousOperation,
@@ -39,18 +28,6 @@ from django.core.exceptions import (ImproperlyConfigured, SuspiciousOperation,
 from django.http import Http404, HttpResponse
 from django.test import TestCase
 from django.test.client import RequestFactory as DjangoRequestFactory
-from django.test.utils import setup_test_environment, teardown_test_environment
-from django.test.runner import setup_databases
-from django.test.runner import DiscoverRunner
-def teardown_databases(old_config, verbosity):
-    """
-    Wrap DiscoverRunner.teardown_databases() to a first-class function,
-    like its partner setup_databases()
-    """
-    # The only time teardown_databases() speaks to self is to get
-    # settings: verbosity, interactive, keepdb, etc
-    # and we can fake that with a mock object.
-    return DiscoverRunner(verbosity=verbosity, interactive=interactive).teardown_databases(old_config)
 
 from .hacks import use_framework_for_site_cache
 
@@ -60,6 +37,7 @@ except ImportError:
     from override_settings import override_settings
 
 from . import SiteDomain, SiteID, threadlocals
+from .hosts import ALLOWED_HOSTS
 from .middleware import CookieDomainMiddleware, DynamicSiteMiddleware
 from .models import Alias
 from .threadlocals import SiteIDHook
@@ -76,7 +54,7 @@ class RequestFactory(DjangoRequestFactory):
         return super(RequestFactory, self).get(path=path, data=data,
                                                HTTP_HOST=host, **extra)
 
-
+@pytest.mark.django_db
 @skipUnless(Site._meta.installed,
             'django.contrib.sites is not in settings.INSTALLED_APPS')
 @override_settings(
@@ -105,6 +83,7 @@ urlpatterns = [
     url(r'^domain/$', lambda request, *args, **kwargs: HttpResponse(str(Site.objects.get_current())))
 ]
 
+@pytest.mark.django_db
 @skipUnless(Site._meta.installed,
             'django.contrib.sites is not in settings.INSTALLED_APPS')
 @override_settings(
@@ -234,7 +213,7 @@ class DynamicSiteMiddlewareTest(TestCase):
         self.assertEqual(settings.SITE_ID, self.site2.pk)
 
 
-
+@pytest.mark.django_db
 @skipUnless(Site._meta.installed,
             'django.contrib.sites is not in settings.INSTALLED_APPS')
 @override_settings(
@@ -292,6 +271,7 @@ class DynamicSiteMiddlewareFallbackTest(TestCase):
                           DynamicSiteMiddleware().process_request, request)
 
 
+@pytest.mark.django_db
 @skipUnless(Site._meta.installed,
             'django.contrib.sites is not in settings.INSTALLED_APPS')
 @override_settings(SITE_ID=0,)
@@ -300,6 +280,7 @@ class DynamicSiteMiddlewareSettingsTest(TestCase):
         self.assertRaises(TypeError, DynamicSiteMiddleware)
 
 
+@pytest.mark.django_db
 @override_settings(
     SITE_ID=SiteID(default=0),
     CACHE_MULTISITE_ALIAS='multisite',
@@ -337,6 +318,7 @@ class CacheTest(TestCase):
         self.assertEqual(settings.SITE_ID, 0)
 
 
+@pytest.mark.django_db
 @skipUnless(Site._meta.installed,
             'django.contrib.sites is not in settings.INSTALLED_APPS')
 @override_settings(SITE_ID=SiteID(),)
@@ -436,7 +418,7 @@ class SiteCacheTest(TestCase):
         self.assertEqual(self.cache[self.site.id], self.site)
         self.assertEqual(
             self.cache._cache._get_cache_key(self.site.id),
-            "sites.looselycoupled.2", # FIXME: this 2 is not stable
+            "sites.looselycoupled.{}".format(self.site.id)
         )
 
     @override_settings(
@@ -449,10 +431,11 @@ class SiteCacheTest(TestCase):
         self.assertEqual(self.cache[self.site.id], self.site)
         self.assertEqual(
             self.cache._cache._get_cache_key(self.site.id),
-            "sites.virtuouslyvirtual.2", # FIXME: this 2 is not stable
+            "sites.virtuouslyvirtual.{}".format(self.site.id)
         )
 
 
+@pytest.mark.django_db
 class TestSiteID(TestCase):
     def setUp(self):
         Site.objects.all().delete()
@@ -527,6 +510,7 @@ class TestSiteID(TestCase):
         self.assertEqual(self.site_id.site_id, None)
 
 
+@pytest.mark.django_db
 @skipUnless(Site._meta.installed,
             'django.contrib.sites is not in settings.INSTALLED_APPS')
 class TestSiteDomain(TestCase):
@@ -551,6 +535,7 @@ class TestSiteDomain(TestCase):
                          site.id)
 
 
+@pytest.mark.django_db
 class TestSiteIDHook(TestCase):
     def test_deprecation_warning(self):
         with warnings.catch_warnings(record=True) as w:
@@ -568,6 +553,7 @@ class TestSiteIDHook(TestCase):
             self.assertEqual(int(site_id), 1)
 
 
+@pytest.mark.django_db
 class AliasTest(TestCase):
     def setUp(self):
         Alias.objects.all().delete()
@@ -803,11 +789,14 @@ class AliasTest(TestCase):
                          alias)
 
 
+
+@pytest.mark.django_db
 @override_settings(
     MULTISITE_COOKIE_DOMAIN_DEPTH=0,
     MULTISITE_PUBLIC_SUFFIX_LIST_CACHE=None,
 )
 class TestCookieDomainMiddleware(TestCase):
+
     def setUp(self):
         self.factory = RequestFactory(host='example.com')
 
@@ -925,46 +914,3 @@ class TestCookieDomainMiddleware(TestCase):
             request = self.factory.get('/', host='www.us.app.example.com')
             cookies = middleware.process_response(request, response).cookies
             self.assertEqual(cookies['a']['domain'], '.app.example.com')
-
-
-
-# Run tests with the necessary Django-global fixtures in place.
-# This mimics what `django manage.py test` does.
-#
-# Long story: Django screwed up.
-# They put fixture-ish code ({setup,teardown}_{test_environment,databases}())
-# into their test runner (django.test.runner.DiscoverRunner.run_tests(test_labels, extra_tests=None),
-#  where test_labels is a list of strings naming the tests to load
-#  *but can be None to mean 'all tests recursively'*,and extra_tests
-#  is a TestSuite, if given) and then failed to make it API-compatible
-# with unittest's design (.run(tests),
-#  where tests is a single TestCase, or a TestSuite)
-# which means `python setup.py test` can't use it as a test_runner,
-# even if the setuptools people had documented clearly how to (which
-# they haven't: https://packaging.python.org/distributing/#setup-args ?
-# https://setuptools.readthedocs.io/en/latest/setuptools.html#test-build-package-and-run-a-unittest-suite ?)
-#
-# They screwed up so bad that someone went ahead and wrote an entire
-# Django plugin <https://github.com/praekelt/django-setuptest> just
-# so they could say `python setup.py test`.
-#
-# These setUp/tearDown methods crimp the relevant lines from run_tests()
-# so that necessary cruft is in place before trying to run the tests.
-#
-# Why doesn't django.test.TestCase do this in a {setUp,tearDown}Class(),
-# but instead expects that you'll use their `manage.py test` runner?
-
-verbosity = 1
-interactive = True
-
-def setUpModule():
-    global db
-    setup_test_environment()
-    db = setup_databases(verbosity, interactive)
-
-def tearDownModule():
-    teardown_databases(db, verbosity)
-    teardown_test_environment()
-
-if __name__ == '__main__':
-    unittest.main()
