@@ -4,11 +4,16 @@
 README
 ======
 
-Get the code via git::
+Install with pip::
+
+    pip install django-multisite
+
+
+Or get the code via git::
 
     git clone git://github.com/ecometrica/django-multisite.git django-multisite
 
-Run::
+Then run::
 
     python setup.py install
 
@@ -61,7 +66,7 @@ Or for Django 1.7 and earlier, add to settings.py TEMPLATES_LOADERS::
         'django.template.loaders.app_directories.Loader',
     ) 
 
-Edit to settings.py MIDDLEWARE_CLASSES::
+Edit settings.py MIDDLEWARE_CLASSES::
 
     MIDDLEWARE_CLASSES = (
         ...
