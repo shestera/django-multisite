@@ -10,6 +10,7 @@ Release Notes
 * Use setuptools over distutils, and integrate the tests with them
 * Use pytest and tox for testing
 * Set up CI with travis
+* Set up coverage and coveralls.io
 
 1.3.1
 -----
