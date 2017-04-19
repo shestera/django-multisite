@@ -986,3 +986,30 @@ class TemplateLoaderTests(TestCase):
             )
         else:
             self.assertEqual(template.render(), "Test example.com template")
+
+    def test_get_template_old_settings(self):
+        # tests that we can still get to the template filesystem loader with
+        # the old setting configuration
+        with override_settings(
+                TEMPLATES=[
+                    {
+                        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+                        'DIRS': [
+                            os.path.join(
+                                os.path.abspath(os.path.dirname(__file__)),
+                                'test_templates')
+                        ],
+                        'OPTIONS': {
+                            'loaders': [
+                                'multisite.template_loader.Loader',
+                            ]
+                        },
+                    }
+                ]
+        ):
+            template = get_template("test.html")
+            if django.VERSION < (1, 8):  # <1.7 render() requires Context instance
+                from django.template.context import Context
+                self.assertEqual(template.render(context=Context()), "Test!")
+            else:
+                self.assertEqual(template.render(), "Test!")
