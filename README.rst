@@ -104,6 +104,17 @@ If you have set CACHE\_MULTISITE\_ALIAS to a custom value, *e.g.*
     }
 
 
+Multisite determines the ALLOWED_HOSTS by checking all Alias domains.  You can
+also set the MULTISITE_EXTRA_HOSTS to include additional hosts.  This can
+include wildcards.::
+
+    MULTISITE_EXTRA_HOSTS = ['example.com']
+    # will match the single additional host
+
+    MULTISITE_EXTRA_HOSTS = ['.example.com']
+    # will match any host ending '.example.com'
+
+
 Domain fallbacks
 ----------------
 

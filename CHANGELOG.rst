@@ -11,6 +11,7 @@ Release Notes
 * Use pytest and tox for testing
 * Set up CI with travis
 * Set up coverage and coveralls.io
+* Document MULTISITE_EXTRA_HOSTS in README
 
 1.3.1
 -----

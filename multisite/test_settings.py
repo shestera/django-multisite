@@ -41,6 +41,7 @@ CACHES = {
     },
 }
 
+MULTISITE_EXTRA_HOSTS = ['.extrahost.com']
 
 if django.VERSION < (1, 8):
     TEMPLATE_LOADERS = ['multisite.template.loaders.filesystem.Loader']

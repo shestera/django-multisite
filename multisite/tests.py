@@ -795,7 +795,7 @@ class AliasTest(TestCase):
 @override_settings(
     MULTISITE_COOKIE_DOMAIN_DEPTH=0,
     MULTISITE_PUBLIC_SUFFIX_LIST_CACHE=None,
-    ALLOWED_HOSTS=ALLOWED_HOSTS
+    ALLOWED_HOSTS=ALLOWED_HOSTS,
 )
 class TestCookieDomainMiddleware(TestCase):
 
@@ -964,6 +964,43 @@ class TestCookieDomainMiddleware(TestCase):
             request = self.factory.get('/', host='new.app.test3.example.com')
             cookies = middleware.process_response(request, response).cookies
             self.assertEqual(cookies['a']['domain'], '.app.test3.example.com')
+
+    def test_wildcard_subdomains(self):
+        response = HttpResponse()
+        response.set_cookie(key='a', value='a', domain=None)
+
+        allowed = [host for host in ALLOWED_HOSTS] + ['.test.example.com']
+        with override_settings(
+                MULTISITE_COOKIE_DOMAIN_DEPTH=2, ALLOWED_HOSTS=allowed
+        ):
+            # At MULTISITE_COOKIE_DOMAIN_DEPTH 2, subdomains are matched to
+            # 2 levels deep against the wildcard
+            middleware = CookieDomainMiddleware()
+            request = self.factory.get('/', host='foo.test.example.com')
+            cookies = middleware.process_response(request, response).cookies
+            self.assertEqual(cookies['a']['domain'], '.foo.test.example.com')
+            cookies['a']['domain'] = ''
+            request = self.factory.get('/', host='foo.bar.test.example.com')
+            cookies = middleware.process_response(request, response).cookies
+            self.assertEqual(cookies['a']['domain'], '.bar.test.example.com')
+
+    def test_multisite_extra_hosts(self):
+        # MULTISITE_EXTRA_HOSTS is set to ['.extrahost.com'] in
+        # test_settings.py.  We can't override it here using override_settings.
+        response = HttpResponse()
+        response.set_cookie(key='a', value='a', domain=None)
+        middleware = CookieDomainMiddleware()
+        request = self.factory.get('/', host='test.extrahost.com')
+        cookies = middleware.process_response(request, response).cookies
+        self.assertEqual(cookies['a']['domain'], '.extrahost.com')
+        cookies['a']['domain'] = ''
+        request = self.factory.get('/', host='foo.extrahost.com')
+        cookies = middleware.process_response(request, response).cookies
+        self.assertEqual(cookies['a']['domain'], '.extrahost.com')
+        cookies['a']['domain'] = ''
+        request = self.factory.get('/', host='foo.bar.extrahost.com')
+        cookies = middleware.process_response(request, response).cookies
+        self.assertEqual(cookies['a']['domain'], '.extrahost.com')
 
 
 @override_settings(MULTISITE_DEFAULT_TEMPLATE_DIR='multisite_templates')
