@@ -7,6 +7,7 @@ Release Notes
 
 * Support Django 1.10 (PR #38) and 1.11
 * Support Python 3
+* Remove support for Django <1.7
 * Use setuptools over distutils, and integrate the tests with them
 * Use pytest and tox for testing
 * Set up CI with travis
