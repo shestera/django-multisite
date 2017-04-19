@@ -41,9 +41,6 @@ class SiteCache(object):
     def __init__(self, cache=None):
         from django.core.cache import caches
 
-        def get_cache(cache_alias):
-            return caches[cache_alias]
-
         if cache is None:
             cache_alias = getattr(settings, 'CACHE_MULTISITE_ALIAS', 'default')
             self._key_prefix = getattr(
@@ -51,7 +48,7 @@ class SiteCache(object):
                 'CACHE_MULTISITE_KEY_PREFIX',
                 settings.CACHES[cache_alias].get('KEY_PREFIX', '')
             )
-            cache = get_cache(cache_alias)
+            cache = caches[cache_alias]
             self._warn_cache_backend(cache, cache_alias)
         else:
             self._key_prefix = getattr(

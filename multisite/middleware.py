@@ -39,10 +39,6 @@ from hashlib import md5 as md5_constructor
 from .models import Alias
 
 
-def get_cache(cache_alias):
-    return caches[cache_alias]
-
-
 class DynamicSiteMiddleware(MiddlewareMixin):
     def __init__(self, *args, **kwargs):
         super(DynamicSiteMiddleware, self).__init__(*args, **kwargs)
@@ -58,7 +54,7 @@ class DynamicSiteMiddleware(MiddlewareMixin):
             settings.CACHES[self.cache_alias].get('KEY_PREFIX', '')
         )
 
-        self.cache = get_cache(self.cache_alias)
+        self.cache = caches[self.cache_alias]
         post_init.connect(self.site_domain_cache_hook, sender=Site,
                           dispatch_uid='multisite_post_init')
         pre_save.connect(self.site_domain_changed_hook, sender=Site)
