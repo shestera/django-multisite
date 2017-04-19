@@ -38,7 +38,7 @@ except ImportError:
     from override_settings import override_settings
 
 from multisite import SiteDomain, SiteID, threadlocals
-from .hosts import ALLOWED_HOSTS
+from .hosts import ALLOWED_HOSTS, AllowedHosts, IterableLazyObject
 from .middleware import CookieDomainMiddleware, DynamicSiteMiddleware
 from .models import Alias
 from .threadlocals import SiteIDHook
@@ -93,6 +93,7 @@ urlpatterns = [
     SITE_ID=SiteID(default=0),
     CACHE_MULTISITE_ALIAS='multisite',
     CACHES={
+        'default': {'BACKEND': 'django.core.cache.backends.dummy.DummyCache'},
         'multisite': {'BACKEND': 'django.core.cache.backends.dummy.DummyCache'}
     },
     MULTISITE_FALLBACK=None,
@@ -410,6 +411,15 @@ class SiteCacheTest(TestCase):
             self.cache._cache._get_cache_key(self.site.id)
         )
 
+    @override_settings(
+        CACHE_MULTISITE_ALIAS='multisite',
+        CACHES={
+            'multisite': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+                'KEY_PREFIX': 'looselycoupled'
+            }
+        },
+    )
     def test_default_key_prefix(self):
         """
         If CACHE_MULTISITE_KEY_PREFIX is undefined,
@@ -796,6 +806,7 @@ class AliasTest(TestCase):
     MULTISITE_COOKIE_DOMAIN_DEPTH=0,
     MULTISITE_PUBLIC_SUFFIX_LIST_CACHE=None,
     ALLOWED_HOSTS=ALLOWED_HOSTS,
+    MULTISITE_EXTRA_HOSTS=['.extrahost.com']
 )
 class TestCookieDomainMiddleware(TestCase):
 
@@ -985,25 +996,55 @@ class TestCookieDomainMiddleware(TestCase):
             self.assertEqual(cookies['a']['domain'], '.bar.test.example.com')
 
     def test_multisite_extra_hosts(self):
-        # MULTISITE_EXTRA_HOSTS is set to ['.extrahost.com'] in
-        # test_settings.py.  We can't override it here using override_settings.
-        response = HttpResponse()
-        response.set_cookie(key='a', value='a', domain=None)
-        middleware = CookieDomainMiddleware()
-        request = self.factory.get('/', host='test.extrahost.com')
-        cookies = middleware.process_response(request, response).cookies
-        self.assertEqual(cookies['a']['domain'], '.extrahost.com')
-        cookies['a']['domain'] = ''
-        request = self.factory.get('/', host='foo.extrahost.com')
-        cookies = middleware.process_response(request, response).cookies
-        self.assertEqual(cookies['a']['domain'], '.extrahost.com')
-        cookies['a']['domain'] = ''
-        request = self.factory.get('/', host='foo.bar.extrahost.com')
-        cookies = middleware.process_response(request, response).cookies
-        self.assertEqual(cookies['a']['domain'], '.extrahost.com')
+        # MULTISITE_EXTRA_HOSTS is set to ['.extrahost.com'] but
+        # ALLOWED_HOSTS seems to be genereated in override_settings before
+        # the extra hosts is added, so we need to recalculate it here.
+        allowed = IterableLazyObject(lambda: AllowedHosts())
+        with override_settings(ALLOWED_HOSTS=allowed):
+            response = HttpResponse()
+            response.set_cookie(key='a', value='a', domain=None)
+            middleware = CookieDomainMiddleware()
+            request = self.factory.get('/', host='test.extrahost.com')
+            cookies = middleware.process_response(request, response).cookies
+            self.assertEqual(cookies['a']['domain'], '.extrahost.com')
+            cookies['a']['domain'] = ''
+            request = self.factory.get('/', host='foo.extrahost.com')
+            cookies = middleware.process_response(request, response).cookies
+            self.assertEqual(cookies['a']['domain'], '.extrahost.com')
+            cookies['a']['domain'] = ''
+            request = self.factory.get('/', host='foo.bar.extrahost.com')
+            cookies = middleware.process_response(request, response).cookies
+            self.assertEqual(cookies['a']['domain'], '.extrahost.com')
 
 
-@override_settings(MULTISITE_DEFAULT_TEMPLATE_DIR='multisite_templates')
+if django.VERSION < (1, 8):
+    TEMPLATE_SETTINGS = {
+        'TEMPLATE_LOADERS': ['multisite.template.loaders.filesystem.Loader'],
+        'TEMPLATE_DIRS': [os.path.join(os.path.abspath(os.path.dirname(__file__)),
+                                  'test_templates')]
+    }
+else:
+    TEMPLATE_SETTINGS = {'TEMPLATES':[
+        {
+            'BACKEND': 'django.template.backends.django.DjangoTemplates',
+            'DIRS': [
+                os.path.join(os.path.abspath(os.path.dirname(__file__)),
+                             'test_templates')
+            ],
+            'OPTIONS': {
+                'loaders': [
+                    'multisite.template.loaders.filesystem.Loader',
+                ]
+            },
+        }
+    ]
+    }
+
+
+@override_settings(
+    MULTISITE_DEFAULT_TEMPLATE_DIR='multisite_templates',
+    **TEMPLATE_SETTINGS
+)
 class TemplateLoaderTests(TestCase):
 
     def test_get_template_multisite_default_dir(self):
