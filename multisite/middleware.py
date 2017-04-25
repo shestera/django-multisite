@@ -221,8 +221,9 @@ class DynamicSiteMiddleware(MiddlewareMixin):
         self.cache.clear()
 
 
-class CookieDomainMiddleware(object):
-    def __init__(self):
+class CookieDomainMiddleware(MiddlewareMixin):
+    def __init__(self, *args, **kwargs):
+        super(CookieDomainMiddleware, self).__init__(*args, **kwargs)
         self.depth = int(getattr(settings, 'MULTISITE_COOKIE_DOMAIN_DEPTH', 0))
         if self.depth < 0:
             raise ValueError(
