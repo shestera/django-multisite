@@ -1,0 +1,3 @@
+[run]
+source=multisite
+omit=multisite/tests.py,multisite/migrations/*,multisite/south_migrations/*

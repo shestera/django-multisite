@@ -15,6 +15,7 @@ try:
 except ImportError:
     # Django < 1.7 compatibility
     from django.db.models.signals import post_syncdb as post_migrate
+from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 
 from .hacks import use_framework_for_site_cache
@@ -149,6 +150,7 @@ def validate_true_or_none(value):
         raise ValidationError(u'%r must be True or None' % value)
 
 
+@python_2_unicode_compatible
 class Alias(models.Model):
     """
     Model for domain-name aliases for Site objects.
@@ -185,8 +187,11 @@ class Alias(models.Model):
         unique_together = [('is_canonical', 'site')]
         verbose_name_plural = _('aliases')
 
-    def __unicode__(self):
+    def __str__(self):
         return "%s -> %s" % (self.domain, self.site.domain)
+
+    def __repr__(self):
+        return '<Alias: %s>' % str(self)
 
     def save_base(self, *args, **kwargs):
         self.full_clean()

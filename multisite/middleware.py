@@ -12,16 +12,10 @@ except ImportError:
 import django
 from django.conf import settings
 from django.contrib.sites.models import Site, SITE_CACHE
+from django.core.exceptions import DisallowedHost
 from django.core import mail
 
-try:
-    from django.core.cache import caches
-except ImportError:
-    # Django < 1.7 compatibility
-    from django.core.cache import get_cache
-else:
-    def get_cache(cache_alias):
-        return caches[cache_alias]
+from django.core.cache import caches
 
 try:
     # Django > 1.10 uses MiddlewareMixin
@@ -30,16 +24,17 @@ except ImportError:
     MiddlewareMixin = object
 
 from django.core.exceptions import ImproperlyConfigured
-from django.core.urlresolvers import get_callable
+
+try:
+    from django.urls import get_callable
+except ImportError:
+    # Django < 1.10 compatibility
+    from django.core.urlresolvers import get_callable
+
 from django.db.models.signals import pre_save, post_delete, post_init
 from django.http import Http404, HttpResponsePermanentRedirect
 
-try:
-    # Deprecated in Django 1.5
-    from django.utils.hashcompat import md5_constructor
-except ImportError:
-    # The above has been removed in Django 1.6
-    from hashlib import md5 as md5_constructor
+from hashlib import md5 as md5_constructor
 
 from .models import Alias
 
@@ -59,7 +54,7 @@ class DynamicSiteMiddleware(MiddlewareMixin):
             settings.CACHES[self.cache_alias].get('KEY_PREFIX', '')
         )
 
-        self.cache = get_cache(self.cache_alias)
+        self.cache = caches[self.cache_alias]
         post_init.connect(self.site_domain_cache_hook, sender=Site,
                           dispatch_uid='multisite_post_init')
         pre_save.connect(self.site_domain_changed_hook, sender=Site)
@@ -178,7 +173,12 @@ class DynamicSiteMiddleware(MiddlewareMixin):
         return HttpResponsePermanentRedirect(url)
 
     def process_request(self, request):
-        netloc = request.get_host().lower()
+        try:
+            netloc = request.get_host().lower()
+        except DisallowedHost:
+            settings.SITE_ID.reset()
+            return self.fallback_view(request)
+
         cache_key = self.get_cache_key(netloc)
 
         # Find the Alias in the cache
@@ -221,8 +221,9 @@ class DynamicSiteMiddleware(MiddlewareMixin):
         self.cache.clear()
 
 
-class CookieDomainMiddleware(object):
-    def __init__(self):
+class CookieDomainMiddleware(MiddlewareMixin):
+    def __init__(self, *args, **kwargs):
+        super(CookieDomainMiddleware, self).__init__(*args, **kwargs)
         self.depth = int(getattr(settings, 'MULTISITE_COOKIE_DOMAIN_DEPTH', 0))
         if self.depth < 0:
             raise ValueError(

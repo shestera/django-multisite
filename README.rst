@@ -1,11 +1,22 @@
+.. image:: https://travis-ci.org/ecometrica/django-multisite.svg?branch=master
+    :target: https://travis-ci.org/ecometrica/django-multisite?branch=master
+.. image:: https://coveralls.io/repos/github/ecometrica/django-multisite/badge.svg?branch=master
+    :target: https://coveralls.io/github/ecometrica/django-multisite?branch=master
+
+
 README
 ======
 
-Get the code via git::
+Install with pip::
+
+    pip install django-multisite
+
+
+Or get the code via git::
 
     git clone git://github.com/ecometrica/django-multisite.git django-multisite
 
-Run::
+Then run::
 
     python setup.py install
 
@@ -39,9 +50,10 @@ Add to your settings.py TEMPLATES loaders in the OPTIONS section::
         ...
         {
             ...
+            'DIRS': {...}
             'OPTIONS': {
                 'loaders': (
-                    'multisite.template_loader.Loader',
+                    'multisite.template.loaders.filesystem.Loader',
                     'django.template.loaders.app_directories.Loader',
                 )
             }
@@ -53,11 +65,11 @@ Add to your settings.py TEMPLATES loaders in the OPTIONS section::
 Or for Django 1.7 and earlier, add to settings.py TEMPLATES_LOADERS::
 
     TEMPLATE_LOADERS = ( 
-        'multisite.template_loader.Loader',
+        'multisite.template.loaders.filesystem.Loader',
         'django.template.loaders.app_directories.Loader',
     ) 
 
-Edit to settings.py MIDDLEWARE_CLASSES::
+Edit settings.py MIDDLEWARE_CLASSES::
 
     MIDDLEWARE_CLASSES = (
         ...
@@ -73,7 +85,8 @@ safely cleared::
     CACHE_MULTISITE_ALIAS = 'multisite'
     
     # The cache key prefix that django-multisite should use.
-    # Default: '' (Empty string)
+    # If not set, defaults to the KEY_PREFIX used in the defined
+    # CACHE_MULTISITE_ALIAS or the default cache (empty string if not set)
     CACHE_MULTISITE_KEY_PREFIX = ''
 
 If you have set CACHE\_MULTISITE\_ALIAS to a custom value, *e.g.*
@@ -89,6 +102,17 @@ If you have set CACHE\_MULTISITE\_ALIAS to a custom value, *e.g.*
             ...
         },
     }
+
+
+Multisite determines the ALLOWED_HOSTS by checking all Alias domains.  You can
+also set the MULTISITE_EXTRA_HOSTS to include additional hosts.  This can
+include wildcards.::
+
+    MULTISITE_EXTRA_HOSTS = ['example.com']
+    # will match the single additional host
+
+    MULTISITE_EXTRA_HOSTS = ['.example.com']
+    # will match any host ending '.example.com'
 
 
 Domain fallbacks
@@ -109,10 +133,21 @@ settings.py::
     MULTISITE_FALLBACK_KWARGS = {'url': 'http://example.com/',
                                  'permanent': False}
 
-Create a directory settings.TEMPLATE_DIRS directory with the names of
+Templates
+---------
+If required, create template subdirectories for domain level templates (in a
+location specified in settings.TEMPLATES['DIRS'], or in settings.TEMPLATE_DIRS
+for Django <=1.7).
+
+Multisite's template loader will look for templates in folders with the names of
 domains, such as::
 
-    mkdir templates/example.com
+    templates/example.com
+
+
+The template loader will also look for templates in a folder specified by the
+optional MULTISITE_DEFAULT_TEMPLATE_DIR setting, e.g.::
+    templates/multisite_templates
 
 
 Cross-domain cookies
@@ -160,17 +195,12 @@ To run the tests::
 
     python setup.py test
 
-Before deploying a change, to verify it has not broken anything you should run::
+Or::
 
-    test_versions
+    pytest
 
-This runs the tests under every supported combination of Django and Python,
-isolated by creating virtualenvs. If a test breaks, it will quit, with the
-virtualenv intact in .venv-python2, or .venv-python3, depending on what broke. 
-You can investigate the broken version manually with::
+Before deploying a change, to verify it has not broken anything by running::
 
-    . .venv-python2/bin/activate  # or .venv-python3
-    python setup.py test
+    tox
 
-(of course, as new versions are supported and old are retired,
-please keep test_versions up to date)
+This runs the tests under every supported combination of Django and Python.

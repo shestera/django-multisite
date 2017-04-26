@@ -1,4 +1,5 @@
 import django
+from multisite import SiteID
 
 SECRET_KEY = "iufoj=mibkpdz*%bob952x(%49rqgv8gg45k36kjcg76&-y5=!"
 
@@ -14,7 +15,7 @@ INSTALLED_APPS = [
     'multisite',
 ]
 
-from multisite import SiteID
+
 SITE_ID = SiteID(default=1)
 
 MIDDLEWARE = [
@@ -26,26 +27,5 @@ if django.VERSION < (1,10,0):
     MIDDLEWARE_CLASSES = list(MIDDLEWARE)
     del MIDDLEWARE
 
-# The cache connection to use for django-multisite.
-# Default: 'default'
-CACHE_MULTISITE_ALIAS = 'test_multisite'
 
-## The cache key prefix that django-multisite should use.
-# This has to be unset for the tests as currently written to test it.
-#CACHE_MULTISITE_KEY_PREFIX = ''
-
-# FIXME: made redundant by override_settings in some of the tests; this should be harmonized.
-CACHES = {
-    CACHE_MULTISITE_ALIAS: {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'TIMEOUT': 60 * 60 * 24,  # 24 hours
-        'KEY_PREFIX': 'looselycoupled',
-    },
-}
-
-
-if django.VERSION < (1, 6):
-    # FIXME: is this still relevant? are we still supporting this?
-    # See https://github.com/ecometrica/django-multisite/issues/39
-    TEST_RUNNER = 'discover_runner.DiscoverRunner'
-
+TEST_RUNNER = 'django.test.runner.DiscoverRunner'

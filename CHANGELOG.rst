@@ -5,10 +5,14 @@ Release Notes
 1.4.0
 -----
 
-* Support Django 1.10 (PR #38)
+* Support Django 1.10 (PR #38) and 1.11
 * Support Python 3
+* Remove support for Django <1.7
 * Use setuptools over distutils, and integrate the tests with them
-* Package `test_versions` to help ensure old versions do not rot
+* Use pytest and tox for testing
+* Set up CI with travis
+* Set up coverage and coveralls.io
+* Document MULTISITE_EXTRA_HOSTS in README
 
 1.3.1
 -----
