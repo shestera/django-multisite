@@ -7,13 +7,13 @@ import os
 import tempfile
 
 from django.conf import settings
-from django.core.management.base import NoArgsCommand
+from django.core.management.base import BaseCommand
 
 import tldextract
 
 
-class Command(NoArgsCommand):
-    def handle_noargs(self, **options):
+class Command(BaseCommand):
+    def handle(self, **options):
         self.setup_logging(verbosity=options.get('verbosity', 1))
 
         filename = getattr(

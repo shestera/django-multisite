@@ -1090,3 +1090,25 @@ class TemplateLoaderTests(TestCase):
                 self.assertEqual(template.render(context=Context()), "Test!")
             else:
                 self.assertEqual(template.render(), "Test!")
+
+
+class UpdatePublicSuffixListCommandTestCase(TestCase):
+
+    def setUp(self):
+        self.cache_file = '/tmp/multisite_tld.dat'
+
+        # patch tldextract to avoid actual requests
+        self.patcher = mock.patch('tldextract.TLDExtract')
+        self.tldextract = self.patcher.start()
+
+    def tearDown(self):
+        self.patcher.stop()
+
+    def test_command(self):
+        call_command('update_public_suffix_list')
+        expected_calls = [
+            mock.call(cache_file=self.cache_file),
+            mock.call().update(fetch_now=True)
+        ]
+        self.assertEqual(self.tldextract.mock_calls, expected_calls)
+
