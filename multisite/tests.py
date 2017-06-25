@@ -14,9 +14,10 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 
 import django
+import logging
+import os
 import pytest
 import sys
-import os
 import tempfile
 import warnings
 from unittest import skipUnless
@@ -30,14 +31,15 @@ from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import Http404
+from django.core.management import call_command
 from django.template.loader import get_template
 from django.test import TestCase, override_settings
 from django.test.client import RequestFactory as DjangoRequestFactory
-
-from .hacks import use_framework_for_site_cache
-
+from django.utils.six import StringIO
 
 from multisite import SiteDomain, SiteID, threadlocals
+
+from .hacks import use_framework_for_site_cache
 from .hosts import ALLOWED_HOSTS, AllowedHosts, IterableLazyObject
 from .middleware import CookieDomainMiddleware, DynamicSiteMiddleware
 from .models import Alias
