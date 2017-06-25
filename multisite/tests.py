@@ -28,10 +28,11 @@ except ImportError:
     import mock
 
 from django.conf import settings
+from django.conf.urls import url
 from django.contrib.sites.models import Site
 from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.http import Http404
 from django.core.management import call_command
+from django.http import Http404, HttpResponse
 from django.template.loader import get_template
 from django.test import TestCase, override_settings
 from django.test.client import RequestFactory as DjangoRequestFactory
@@ -74,10 +75,6 @@ class TestContribSite(TestCase):
         current_site = Site.objects.get_current()
         self.assertEqual(current_site, self.site)
         self.assertEqual(current_site.id, settings.SITE_ID)
-
-
-from django.http import HttpResponse
-from django.conf.urls import url
 
 # Because we are a middleware package, we have no views available to test with easily
 # So create one:
