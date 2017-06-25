@@ -18,11 +18,15 @@ import pytest
 import sys
 import os
 import tempfile
-from unittest import skipUnless
 import warnings
+from unittest import skipUnless
+
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 from django.conf import settings
-
 from django.contrib.sites.models import Site
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import Http404
