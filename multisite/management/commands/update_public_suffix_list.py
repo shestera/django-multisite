@@ -29,11 +29,10 @@ class Command(BaseCommand):
     def setup_logging(self, verbosity):
         self.verbosity = int(verbosity)
 
-        # Mute tldextract's logger
-        logger = logging.getLogger('tldextract')
+        # Connect to tldextract's logger
+        self.logger = logging.getLogger('tldextract')
         if self.verbosity < 2:
-            logger.setLevel(logging.CRITICAL)
+            self.logger.setLevel(logging.CRITICAL)
 
-    def log(self, msg, level=2):
-        if self.verbosity >= level:
-            print(msg)
+    def log(self, msg):
+        self.logger.info(msg)
