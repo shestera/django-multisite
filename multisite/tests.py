@@ -31,15 +31,11 @@ from django.contrib.sites.models import Site
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import Http404
 from django.template.loader import get_template
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.test.client import RequestFactory as DjangoRequestFactory
 
 from .hacks import use_framework_for_site_cache
 
-try:
-    from django.test.utils import override_settings
-except ImportError:
-    from override_settings import override_settings
 
 from multisite import SiteDomain, SiteID, threadlocals
 from .hosts import ALLOWED_HOSTS, AllowedHosts, IterableLazyObject
