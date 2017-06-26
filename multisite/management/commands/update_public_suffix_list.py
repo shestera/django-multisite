@@ -7,13 +7,13 @@ import os
 import tempfile
 
 from django.conf import settings
-from django.core.management.base import NoArgsCommand
+from django.core.management.base import BaseCommand
 
 import tldextract
 
 
-class Command(NoArgsCommand):
-    def handle_noargs(self, **options):
+class Command(BaseCommand):
+    def handle(self, **options):
         self.setup_logging(verbosity=options.get('verbosity', 1))
 
         filename = getattr(
@@ -29,11 +29,10 @@ class Command(NoArgsCommand):
     def setup_logging(self, verbosity):
         self.verbosity = int(verbosity)
 
-        # Mute tldextract's logger
-        logger = logging.getLogger('tldextract')
+        # Connect to tldextract's logger
+        self.logger = logging.getLogger('tldextract')
         if self.verbosity < 2:
-            logger.setLevel(logging.CRITICAL)
+            self.logger.setLevel(logging.CRITICAL)
 
-    def log(self, msg, level=2):
-        if self.verbosity >= level:
-            print(msg)
+    def log(self, msg):
+        self.logger.info(msg)

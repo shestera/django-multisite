@@ -14,30 +14,33 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 
 import django
+import logging
+import os
 import pytest
 import sys
-import os
 import tempfile
-from unittest import skipUnless
 import warnings
-
-from django.conf import settings
-
-from django.contrib.sites.models import Site
-from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.http import Http404
-from django.template.loader import get_template
-from django.test import TestCase
-from django.test.client import RequestFactory as DjangoRequestFactory
-
-from .hacks import use_framework_for_site_cache
+from unittest import skipUnless
 
 try:
-    from django.test.utils import override_settings
+    from unittest import mock
 except ImportError:
-    from override_settings import override_settings
+    import mock
+
+from django.conf import settings
+from django.conf.urls import url
+from django.contrib.sites.models import Site
+from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.core.management import call_command
+from django.http import Http404, HttpResponse
+from django.template.loader import get_template
+from django.test import TestCase, override_settings
+from django.test.client import RequestFactory as DjangoRequestFactory
+from django.utils.six import StringIO
 
 from multisite import SiteDomain, SiteID, threadlocals
+
+from .hacks import use_framework_for_site_cache
 from .hosts import ALLOWED_HOSTS, AllowedHosts, IterableLazyObject
 from .middleware import CookieDomainMiddleware, DynamicSiteMiddleware
 from .models import Alias
@@ -72,10 +75,6 @@ class TestContribSite(TestCase):
         current_site = Site.objects.get_current()
         self.assertEqual(current_site, self.site)
         self.assertEqual(current_site.id, settings.SITE_ID)
-
-
-from django.http import HttpResponse
-from django.conf.urls import url
 
 # Because we are a middleware package, we have no views available to test with easily
 # So create one:
@@ -1091,3 +1090,44 @@ class TemplateLoaderTests(TestCase):
                 self.assertEqual(template.render(context=Context()), "Test!")
             else:
                 self.assertEqual(template.render(), "Test!")
+
+
+class UpdatePublicSuffixListCommandTestCase(TestCase):
+
+    def setUp(self):
+        self.cache_file = '/tmp/multisite_tld.dat'
+
+        # save the tldextract logger output to a buffer to test output
+        self.out = StringIO()
+        self.logger = logging.getLogger('tldextract')
+        self.logger.setLevel(logging.DEBUG)
+        stdout_handler = logging.StreamHandler(self.out)
+        stdout_handler.setLevel(logging.DEBUG)
+        self.logger.addHandler(stdout_handler)
+
+        # patch tldextract to avoid actual requests
+        self.patcher = mock.patch('tldextract.TLDExtract')
+        self.tldextract = self.patcher.start()
+
+    def tearDown(self):
+        self.patcher.stop()
+
+    def tldextract_update_side_effect(self, *args, **kwargs):
+        self.logger.debug('TLDExtract.update called')
+
+    def test_command(self):
+        call_command('update_public_suffix_list')
+        expected_calls = [
+            mock.call(cache_file=self.cache_file),
+            mock.call().update(fetch_now=True)
+        ]
+        self.assertEqual(self.tldextract.mock_calls, expected_calls)
+
+    def test_command_output(self):
+        # make sure that the logger receives output from the method
+        self.tldextract().update.side_effect = self.tldextract_update_side_effect
+
+        call_command('update_public_suffix_list', verbosity=3)
+        update_message = 'Updating {}'.format(self.cache_file)
+        self.assertIn(update_message, self.out.getvalue())
+        self.assertIn('TLDExtract.update called', self.out.getvalue())
