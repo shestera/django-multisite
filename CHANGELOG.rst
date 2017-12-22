@@ -2,9 +2,13 @@
 Release Notes
 =============
 
+1.4.1
+-----
+* Specify Django <2.0 in setup.py
+* Drop support for python 3.3
+
 1.4.0
 -----
-
 * Support Django 1.10 (PR #38) and 1.11
 * Support Python 3
 * Remove support for Django <1.7
