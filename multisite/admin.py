@@ -65,7 +65,10 @@ class MultisiteChangeList(ChangeList):
         user_sites = frozenset(profile.sites.values_list("pk", "domain"))
         for filter_spec in filter_specs:
             try:
-                rel_to = filter_spec.field.rel.to
+                try:
+                    rel_to = filter_spec.field.remote_field.to
+                except AttributeError:
+                    rel_to = filter_spec.field.rel.to
             except AttributeError:
                 new_filter_specs.append(filter_spec)
                 continue
@@ -193,12 +196,16 @@ class MultisiteModelAdmin(admin.ModelAdmin):
         else:
             sites = user_sites
 
-        if hasattr(db_field.rel.to, "site"):
-            kwargs["queryset"] = db_field.rel.to._default_manager.filter(
+        try:
+            rel_to = db_field.remote_field.to
+        except AttributeError:
+            rel_to = db_field.rel.to
+        if hasattr(rel_to, "site"):
+            kwargs["queryset"] = rel_to._default_manager.filter(
                 site__in=user_sites
             )
-        if hasattr(db_field.rel.to, "sites"):
-            kwargs["queryset"] = db_field.rel.to._default_manager.filter(
+        if hasattr(rel_to, "sites"):
+            kwargs["queryset"] = rel_to._default_manager.filter(
                 sites__in=user_sites
             )
         if db_field.name == "site" or db_field.name == "sites":
@@ -206,7 +213,7 @@ class MultisiteModelAdmin(admin.ModelAdmin):
         if hasattr(self, "multisite_indirect_foreign_key_path") and \
            db_field.name in self.multisite_indirect_foreign_key_path.keys():
             fkey = self.multisite_indirect_foreign_key_path[db_field.name]
-            kwargs["queryset"] = db_field.rel.to._default_manager.filter(
+            kwargs["queryset"] = rel_to._default_manager.filter(
                 **{fkey: user_sites}
             )
 
