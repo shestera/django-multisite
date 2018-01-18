@@ -127,7 +127,7 @@ class CanonicalAliasManager(models.Manager):
         """Create missing canonical Alias objects based on Site.domain."""
         aliases = self.get_queryset()
         try:
-            sites = self.model._meta.get_field('site').remote_field.to
+            sites = self.model._meta.get_field('site').remote_field.model
         except AttributeError:
             sites = self.model._meta.get_field('site').rel.to
         for site in sites.objects.exclude(aliases__in=aliases):

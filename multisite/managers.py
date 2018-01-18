@@ -84,7 +84,7 @@ class SpanningCurrentSiteManager(managers.CurrentSiteManager):
         """Given a model and the name of a ForeignKey or ManyToManyField column
         as a string, returns the associated model."""
         try:
-            return model._meta.get_field(fieldname).remote_field.to
+            return model._meta.get_field(fieldname).remote_field.model
         except AttributeError:
             return model._meta.get_field(fieldname).rel.to
 
