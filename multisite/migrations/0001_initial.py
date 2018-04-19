@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
                 ('domain', models.CharField(help_text='Either "domain" or "domain:port"', unique=True, max_length=100, verbose_name='domain name')),
                 ('is_canonical', models.NullBooleanField(default=None, validators=[multisite.models.validate_true_or_none], editable=False, help_text='Does this domain name match the one in site?', verbose_name='is canonical?')),
                 ('redirect_to_canonical', models.BooleanField(default=True, help_text='Should this domain name redirect to the one in site?', verbose_name='redirect to canonical?')),
-                ('site', models.ForeignKey(related_name='aliases', to='sites.Site')),
+                ('site', models.ForeignKey(related_name='aliases', to='sites.Site', on_delete=models.CASCADE)),
             ],
             options={
                 'verbose_name_plural': 'aliases',

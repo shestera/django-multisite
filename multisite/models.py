@@ -169,7 +169,9 @@ class Alias(models.Model):
         unique=True,
         help_text=_('Either "domain" or "domain:port"'),
     )
-    site = models.ForeignKey(Site, related_name='aliases')
+    site = models.ForeignKey(
+        Site, related_name='aliases', on_delete=models.CASCADE
+    )
     is_canonical = models.NullBooleanField(
         _('is canonical?'),
         default=None, editable=False,
