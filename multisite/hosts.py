@@ -1,21 +1,12 @@
 from __future__ import unicode_literals
 from __future__ import absolute_import
 
-from django.utils.functional import SimpleLazyObject
-
-from django import VERSION as django_version
+from django.utils.functional import empty, SimpleLazyObject
 
 
 __ALL__ = ('ALLOWED_HOSTS', 'AllowedHosts')
 
-
-# In Django 1.3, LazyObject compares _wrapped against None, while in Django
-# 1.4 and above, LazyObjects compares _wrapped against an instance of
-# `object` stored in `empty`.
-_wrapped_default = None
-if django_version >= (1, 4, 0):
-    from django.utils.functional import empty
-    _wrapped_default = empty
+_wrapped_default = empty
 
 
 class IterableLazyObject(SimpleLazyObject):
