@@ -1,7 +1,15 @@
+import sys
+
 from setuptools import find_packages, setup
 import os
 
 _dir_ = os.path.dirname(__file__)
+
+
+if sys.version_info < (3, 4):
+    install_requires = ['Django>=1.7,<2.0', 'tldextract>=1.2']
+else:
+    install_requires = ['Django>=1.7,<2.1', 'tldextract>=1.2']
 
 
 def long_description():
@@ -24,8 +32,7 @@ setup(name='django-multisite',
       packages=find_packages(),
       include_package_data=True,
       package_data={'multisite': files},
-      install_requires=['Django>=1.7,<2.0',
-                        'tldextract>=1.2'],
+      install_requires=install_requires,
       setup_requires=['pytest-runner'],
       tests_require=['coverage', 'mock', 'pytest', 'pytest-cov',
                      'pytest-django', 'pytest-pythonpath', 'tox'],
