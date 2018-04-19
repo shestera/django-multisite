@@ -13,3 +13,4 @@ parts
 MANIFEST
 multisite/*.egg-info
 .tox/
+.pytest_cache/
