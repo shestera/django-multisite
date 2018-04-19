@@ -2,8 +2,6 @@
 from __future__ import unicode_literals
 from __future__ import absolute_import
 
-from warnings import warn
-
 from django.db import models
 from django.contrib.sites import managers
 from django.db.models.fields import FieldDoesNotExist
@@ -87,21 +85,3 @@ class SpanningCurrentSiteManager(managers.CurrentSiteManager):
             return model._meta.get_field(fieldname).remote_field.model
         except AttributeError:
             return model._meta.get_field(fieldname).rel.to
-
-
-class PathAssistedCurrentSiteManager(models.CurrentSiteManager):
-    """
-    Deprecated: Use multisite.managers.SpanningCurrentSiteManager instead.
-    """
-    def __init__(self, field_path):
-        warn(('Use multisite.managers.SpanningCurrentSiteManager instead of '
-              'multisite.managers.PathAssistedCurrentSiteManager'),
-             DeprecationWarning, stacklevel=2)
-        super(PathAssistedCurrentSiteManager, self).__init__()
-        self.__field_path = field_path
-
-    def get_queryset(self):
-        from django.contrib.sites.models import Site
-        return super(models.CurrentSiteManager, self).get_queryset().filter(
-                    **{self.__field_path: Site.objects.get_current()}
-                )
