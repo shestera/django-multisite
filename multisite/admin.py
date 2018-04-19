@@ -65,11 +65,14 @@ class MultisiteChangeList(ChangeList):
         user_sites = frozenset(profile.sites.values_list("pk", "domain"))
         for filter_spec in filter_specs:
             try:
-                rel_to = filter_spec.field.rel.to
+                try:
+                    remote_model = filter_spec.field.remote_field.model
+                except AttributeError:
+                    remote_model = filter_spec.field.rel.to
             except AttributeError:
                 new_filter_specs.append(filter_spec)
                 continue
-            if rel_to is not Site:
+            if remote_model is not Site:
                 new_filter_specs.append(filter_spec)
                 continue
             lookup_choices = frozenset(filter_spec.lookup_choices) & user_sites
@@ -193,12 +196,16 @@ class MultisiteModelAdmin(admin.ModelAdmin):
         else:
             sites = user_sites
 
-        if hasattr(db_field.rel.to, "site"):
-            kwargs["queryset"] = db_field.rel.to._default_manager.filter(
+        try:
+            remote_model = db_field.remote_field.model
+        except AttributeError:
+            remote_model = db_field.rel.to
+        if hasattr(remote_model, "site"):
+            kwargs["queryset"] = remote_model._default_manager.filter(
                 site__in=user_sites
             )
-        if hasattr(db_field.rel.to, "sites"):
-            kwargs["queryset"] = db_field.rel.to._default_manager.filter(
+        if hasattr(remote_model, "sites"):
+            kwargs["queryset"] = remote_model._default_manager.filter(
                 sites__in=user_sites
             )
         if db_field.name == "site" or db_field.name == "sites":
@@ -206,7 +213,7 @@ class MultisiteModelAdmin(admin.ModelAdmin):
         if hasattr(self, "multisite_indirect_foreign_key_path") and \
            db_field.name in self.multisite_indirect_foreign_key_path.keys():
             fkey = self.multisite_indirect_foreign_key_path[db_field.name]
-            kwargs["queryset"] = db_field.rel.to._default_manager.filter(
+            kwargs["queryset"] = remote_model._default_manager.filter(
                 **{fkey: user_sites}
             )
 

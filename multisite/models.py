@@ -126,7 +126,10 @@ class CanonicalAliasManager(models.Manager):
     def sync_missing(self):
         """Create missing canonical Alias objects based on Site.domain."""
         aliases = self.get_queryset()
-        sites = self.model._meta.get_field('site').rel.to
+        try:
+            sites = self.model._meta.get_field('site').remote_field.model
+        except AttributeError:
+            sites = self.model._meta.get_field('site').rel.to
         for site in sites.objects.exclude(aliases__in=aliases):
             Alias.sync(site=site)
 

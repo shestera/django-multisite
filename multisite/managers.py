@@ -83,7 +83,10 @@ class SpanningCurrentSiteManager(managers.CurrentSiteManager):
     def _get_related_model(self, model, fieldname):
         """Given a model and the name of a ForeignKey or ManyToManyField column
         as a string, returns the associated model."""
-        return model._meta.get_field_by_name(fieldname)[0].rel.to
+        try:
+            return model._meta.get_field(fieldname).remote_field.model
+        except AttributeError:
+            return model._meta.get_field(fieldname).rel.to
 
 
 class PathAssistedCurrentSiteManager(models.CurrentSiteManager):
