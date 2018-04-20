@@ -62,16 +62,16 @@ Add to your settings.py TEMPLATES loaders in the OPTIONS section::
         ...
     ]
 
-Or for Django 1.7 and earlier, add to settings.py TEMPLATES_LOADERS::
+Or for Django <= 1.7, add to settings.py TEMPLATES_LOADERS::
 
     TEMPLATE_LOADERS = ( 
         'multisite.template.loaders.filesystem.Loader',
         'django.template.loaders.app_directories.Loader',
     ) 
 
-Edit settings.py MIDDLEWARE_CLASSES::
+Edit settings.py MIDDLEWARE (MIDDLEWARE_CLASSES for Django < 1.10)::
 
-    MIDDLEWARE_CLASSES = (
+    MIDDLEWARE = (
         ...
         'multisite.middleware.DynamicSiteMiddleware',
         ...
@@ -115,6 +115,26 @@ include wildcards.::
     # will match any host ending '.example.com'
 
 
+Development Environments
+------------------------
+Multisite returns a valid Alias when in "development mode" (defaulting to the
+alias associated with the default SiteID.
+
+Development mode is either:
+    - Running tests, i.e. manage.py test
+    - Running locally in settings.DEBUG = True, where the hostname is a
+    top-level name, i.e. localhost
+
+In order to have multisite use aliases in local environments, add entries to
+your local etc/hosts file to match aliases in your applications.  E.g. ::
+
+    127.0.0.1 example.com
+    127.0.0.1 examplealias.com
+
+And access your application at example.com:8000 or examplealias.com:8000 instead of
+the usual localhost:8000.
+
+
 Domain fallbacks
 ----------------
 
@@ -156,9 +176,9 @@ Cross-domain cookies
 In order to support `cross-domain cookies`_,
 for purposes like single-sign-on,
 prepend the following to the top of
-settings.py MIDDLEWARE_CLASSES::
+settings.py MIDDLEWARE (MIDDLEWARE_CLASSES for Django < 1.10)::
 
-    MIDDLEWARE_CLASSES = (
+    MIDDLEWARE = (
         'multisite.middleware.CookieDomainMiddleware',
         ...
     )

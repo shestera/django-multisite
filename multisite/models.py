@@ -10,11 +10,7 @@ from django.core.validators import validate_ipv4_address
 from django.db import connections, models, router
 from django.db.models import Q
 from django.db.models.signals import pre_save, post_save
-try:
-    from django.db.models.signals import post_migrate
-except ImportError:
-    # Django < 1.7 compatibility
-    from django.db.models.signals import post_syncdb as post_migrate
+from django.db.models.signals import post_migrate
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 
@@ -169,7 +165,9 @@ class Alias(models.Model):
         unique=True,
         help_text=_('Either "domain" or "domain:port"'),
     )
-    site = models.ForeignKey(Site, related_name='aliases')
+    site = models.ForeignKey(
+        Site, related_name='aliases', on_delete=models.CASCADE
+    )
     is_canonical = models.NullBooleanField(
         _('is canonical?'),
         default=None, editable=False,
@@ -318,14 +316,7 @@ class Alias(models.Model):
     @classmethod
     def db_table_created_hook(cls, *args, **kwargs):
         """Syncs canonical Alias objects for all existing Site objects."""
-        if kwargs.get('created_models'):
-            # For post_syncdb support in Django < 1.7:
-            # As before, only sync_all if Alias was in
-            # the list of created models
-            if cls in kwargs['created_models']:
-                Alias.canonical.sync_all()
-        else:
-            Alias.canonical.sync_all()
+        Alias.canonical.sync_all()
 
 
 # Hooks to handle Site objects being created or changed
