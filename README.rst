@@ -122,8 +122,7 @@ alias associated with the default SiteID.
 
 Development mode is either:
     - Running tests, i.e. manage.py test
-    - Running locally in settings.DEBUG = True, where the hostname is a
-    top-level name, i.e. localhost
+    - Running locally in settings.DEBUG = True, where the hostname is a top-level name, i.e. localhost
 
 In order to have multisite use aliases in local environments, add entries to
 your local etc/hosts file to match aliases in your applications.  E.g. ::
@@ -167,6 +166,7 @@ domains, such as::
 
 The template loader will also look for templates in a folder specified by the
 optional MULTISITE_DEFAULT_TEMPLATE_DIR setting, e.g.::
+
     templates/multisite_templates
 
 
