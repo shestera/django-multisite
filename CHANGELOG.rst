@@ -2,6 +2,14 @@
 Release Notes
 =============
 
+1.5.0
+-----
+* Support Django 2.0 (PR #47 and #60)
+* Remove code for Django < 1.7
+* Remove obsolete PathAssistedCurrentSiteManager
+* Remove obsolete template.loaders.cached
+* Update README to better describe local development setup
+
 1.4.1
 -----
 * Specify Django <2.0 in setup.py

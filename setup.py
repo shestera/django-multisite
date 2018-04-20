@@ -1,7 +1,7 @@
+import os
 import sys
 
 from setuptools import find_packages, setup
-import os
 
 _dir_ = os.path.dirname(__file__)
 
@@ -17,11 +17,16 @@ def long_description():
     with open(os.path.join(_dir_, 'README.rst')) as f:
         return f.read()
 
+here = os.path.abspath(_dir_)
+version = {}
+with open(os.path.join(here, 'multisite', '__version__.py')) as f:
+    exec(f.read(), version)
+
 
 files = ["multisite/test_templates/*"]
 
 setup(name='django-multisite',
-      version='1.4.1',
+      version=version['__version__'],
       description='Serve multiple sites from a single Django application',
       long_description=long_description(),
       author='Leonid S Shestera',
@@ -52,4 +57,4 @@ setup(name='django-multisite',
                    'Topic :: Internet :: WWW/HTTP',
                    'Topic :: Software Development :: Libraries',
                    'Topic :: Utilities'],
-)
+      )
