@@ -62,13 +62,6 @@ Add to your settings.py TEMPLATES loaders in the OPTIONS section::
         ...
     ]
 
-Or for Django <= 1.7, add to settings.py TEMPLATES_LOADERS::
-
-    TEMPLATE_LOADERS = ( 
-        'multisite.template.loaders.filesystem.Loader',
-        'django.template.loaders.app_directories.Loader',
-    ) 
-
 Edit settings.py MIDDLEWARE (MIDDLEWARE_CLASSES for Django < 1.10)::
 
     MIDDLEWARE = (
@@ -155,8 +148,7 @@ settings.py::
 Templates
 ---------
 If required, create template subdirectories for domain level templates (in a
-location specified in settings.TEMPLATES['DIRS'], or in settings.TEMPLATE_DIRS
-for Django <=1.7).
+location specified in settings.TEMPLATES['DIRS'].
 
 Multisite's template loader will look for templates in folders with the names of
 domains, such as::

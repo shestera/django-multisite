@@ -1027,21 +1027,11 @@ class TemplateLoaderTests(TestCase):
 
     def test_get_template_multisite_default_dir(self):
         template = get_template("test.html")
-        if django.VERSION < (1, 8):  # <1.7 render() requires Context instance
-            from django.template.context import Context
-            self.assertEqual(template.render(context=Context()), "Test!")
-        else:
-            self.assertEqual(template.render(), "Test!")
+        self.assertEqual(template.render(), "Test!")
 
     def test_domain_template(self):
         template = get_template("example.html")
-        if django.VERSION < (1, 8):  # <1.7 render() requires Context instance
-            from django.template.context import Context
-            self.assertEqual(
-                template.render(context=Context()), "Test example.com template"
-            )
-        else:
-            self.assertEqual(template.render(), "Test example.com template")
+        self.assertEqual(template.render(), "Test example.com template")
 
     def test_get_template_old_settings(self):
         # tests that we can still get to the template filesystem loader with
@@ -1064,11 +1054,7 @@ class TemplateLoaderTests(TestCase):
                 ]
         ):
             template = get_template("test.html")
-            if django.VERSION < (1, 8):  # <1.7 render() requires Context instance
-                from django.template.context import Context
-                self.assertEqual(template.render(context=Context()), "Test!")
-            else:
-                self.assertEqual(template.render(), "Test!")
+            self.assertEqual(template.render(), "Test!")
 
 
 class UpdatePublicSuffixListCommandTestCase(TestCase):

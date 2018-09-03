@@ -2,6 +2,13 @@
 Release Notes
 =============
 
+1.6.0
+-----
+* Fix KeyError from _get_site_by_id
+* Drop support for Django 1.7
+* Remove unnecessary cache type warnings
+* Remove deprecated SiteIDHook
+
 1.5.0
 -----
 * Support Django 2.0 (PR #47 and #60)
