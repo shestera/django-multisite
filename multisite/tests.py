@@ -351,7 +351,7 @@ class SiteCacheTest(TestCase):
         settings.SITE_ID.set(self.site.id)
 
     def test_get_current(self):
-        self.assertRaises(KeyError, self.cache.__getitem__, self.site.id)
+        self.assertIsNone(self.cache.__getitem__(self.site.id))
         # Populate cache
         self.assertEqual(Site.objects.get_current(), self.site)
         self.assertEqual(self.cache[self.site.id], self.site)
@@ -367,7 +367,7 @@ class SiteCacheTest(TestCase):
                                         version=100))  # Wrong key version 3
         # Clear cache
         self.cache.clear()
-        self.assertRaises(KeyError, self.cache.__getitem__, self.site.id)
+        self.assertIsNone(self.cache.__getitem__(self.site.id))
         self.assertEqual(self.cache.get(key=self.site.id, default='Cleared'),
                          'Cleared')
 
@@ -394,7 +394,7 @@ class SiteCacheTest(TestCase):
         self.assertEqual(Site.objects.get_current().domain, self.site.domain)
         # Delete site
         self.site.delete()
-        self.assertRaises(KeyError, self.cache.__getitem__, self.site.id)
+        self.assertIsNone(self.cache.__getitem__(self.site.id))
 
     @override_settings(CACHE_MULTISITE_KEY_PREFIX="__test__")
     def test_multisite_key_prefix(self):

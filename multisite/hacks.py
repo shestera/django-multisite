@@ -22,6 +22,7 @@ def use_framework_for_site_cache():
 
     # Patch the SiteManager class
     models.SiteManager.clear_cache = SiteManager_clear_cache
+    models.SiteManager._get_site_by_id = SiteManager_get_site_by_id
 
     # Hooks to update SiteCache
     post_save.connect(site_cache._site_changed_hook, sender=models.Site)
@@ -33,6 +34,18 @@ def SiteManager_clear_cache(self):
     """Clears the ``Site`` object cache."""
     models = sys.modules.get(self.__class__.__module__)
     models.SITE_CACHE.clear()
+
+
+# Override SiteManager._get_site_by_id
+def SiteManager_get_site_by_id(self, site_id):
+    """Patch _get_site_by_id to return the site from the DB if necessary."""
+    models = sys.modules.get(self.__class__.__module__)
+    if site_id not in models.SITE_CACHE:
+        site = self.get(pk=site_id)
+        models.SITE_CACHE[site_id] = site
+    # there can be a race condition between processes; if we can't find the site
+    # in the cache at this point, fetch it from the DB
+    return models.SITE_CACHE[site_id] or self.get(pk=site_id)
 
 
 class SiteCache(object):
@@ -119,10 +132,7 @@ class DictCache(object):
     def __getitem__(self, key):
         """x.__getitem__(y) <==> x[y]"""
         hash(key)               # Raise TypeError if unhashable
-        result = self._cache.get(key=key)
-        if result is None:
-            raise KeyError(key)
-        return result
+        return self._cache.get(key=key)
 
     def __setitem__(self, key, value):
         """x.__setitem__(i, y) <==> x[i]=y"""
