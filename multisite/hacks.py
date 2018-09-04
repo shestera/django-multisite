@@ -2,7 +2,6 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 
 import sys
-from warnings import warn
 
 from django.conf import settings
 from django.db.models.signals import post_save, post_delete
@@ -62,27 +61,11 @@ class SiteCache(object):
                 settings.CACHES[cache_alias].get('KEY_PREFIX', '')
             )
             cache = caches[cache_alias]
-            self._warn_cache_backend(cache, cache_alias)
         else:
             self._key_prefix = getattr(
                 settings, 'CACHE_MULTISITE_KEY_PREFIX', cache.key_prefix
             )
         self._cache = cache
-
-    def _warn_cache_backend(self, cache, cache_alias):
-        from django.core.cache.backends.dummy import DummyCache
-        from django.core.cache.backends.db import DatabaseCache
-        from django.core.cache.backends.filebased import FileBasedCache
-        from django.core.cache.backends.locmem import LocMemCache
-
-        if isinstance(cache, (LocMemCache, FileBasedCache)):
-            warn(("'%s' cache is %s, which may cause stale caches." %
-                  (cache_alias, type(cache).__name__)),
-                 RuntimeWarning, stacklevel=3)
-        elif isinstance(cache, (DatabaseCache, DummyCache)):
-            warn(("'%s' is %s, causing extra database queries." %
-                  (cache_alias, type(cache).__name__)),
-                 RuntimeWarning, stacklevel=3)
 
     def _get_cache_key(self, key):
         return 'sites.%s.%s' % (self.key_prefix, key)
