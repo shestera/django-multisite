@@ -44,7 +44,6 @@ from .hacks import use_framework_for_site_cache
 from .hosts import ALLOWED_HOSTS, AllowedHosts, IterableLazyObject
 from .middleware import CookieDomainMiddleware, DynamicSiteMiddleware
 from .models import Alias
-from .threadlocals import SiteIDHook
 
 
 class RequestFactory(DjangoRequestFactory):
@@ -478,14 +477,12 @@ class TestSiteID(TestCase):
 
     def test_compare_differing_types(self):
         self.site_id.set(1)
-        # SiteIDHook <op> int
         self.assertNotEqual(self.site_id, '1')
         self.assertFalse(self.site_id == '1')
         self.assertTrue(self.site_id < '1')
         self.assertTrue(self.site_id <= '1')
         self.assertFalse(self.site_id > '1')
         self.assertFalse(self.site_id >= '1')
-        # int <op> SiteIDHook
         self.assertNotEqual('1', self.site_id)
         self.assertFalse('1' == self.site_id)
         self.assertFalse('1' < self.site_id)
@@ -545,24 +542,6 @@ class TestSiteDomain(TestCase):
         site = Site.objects.create(domain=domain)
         self.assertEqual(int(SiteDomain(default=domain)),
                          site.id)
-
-
-@pytest.mark.django_db
-class TestSiteIDHook(TestCase):
-    def test_deprecation_warning(self):
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter('always')
-            threadlocals.__warningregistry__ = {}
-            SiteIDHook()
-            self.assertTrue(w)
-            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
-
-    def test_default_value(self):
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            site_id = SiteIDHook()
-            self.assertEqual(site_id.default, 1)
-            self.assertEqual(int(site_id), 1)
 
 
 @pytest.mark.django_db
