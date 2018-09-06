@@ -37,14 +37,16 @@ def SiteManager_clear_cache(self):
 
 # Override SiteManager._get_site_by_id
 def SiteManager_get_site_by_id(self, site_id):
-    """Patch _get_site_by_id to return the site from the DB if necessary."""
+    """
+    Patch _get_site_by_id to retrieve the site from the cache at the
+    beginning of the method to avoid a race condition.
+    """
     models = sys.modules.get(self.__class__.__module__)
-    if site_id not in models.SITE_CACHE:
+    site = models.SITE_CACHE.get(site_id)
+    if site is None:
         site = self.get(pk=site_id)
         models.SITE_CACHE[site_id] = site
-    # there can be a race condition between processes; if we can't find the site
-    # in the cache at this point, fetch it from the DB
-    return models.SITE_CACHE[site_id] or self.get(pk=site_id)
+    return site
 
 
 class SiteCache(object):
@@ -115,7 +117,10 @@ class DictCache(object):
     def __getitem__(self, key):
         """x.__getitem__(y) <==> x[y]"""
         hash(key)               # Raise TypeError if unhashable
-        return self._cache.get(key=key)
+        result = self._cache.get(key=key)
+        if result is None:
+            raise KeyError(key)
+        return result
 
     def __setitem__(self, key, value):
         """x.__setitem__(i, y) <==> x[i]=y"""
