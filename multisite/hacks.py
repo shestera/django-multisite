@@ -2,7 +2,6 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 
 import sys
-from warnings import warn
 
 from django.conf import settings
 from django.db.models.signals import post_save, post_delete
@@ -22,6 +21,7 @@ def use_framework_for_site_cache():
 
     # Patch the SiteManager class
     models.SiteManager.clear_cache = SiteManager_clear_cache
+    models.SiteManager._get_site_by_id = SiteManager_get_site_by_id
 
     # Hooks to update SiteCache
     post_save.connect(site_cache._site_changed_hook, sender=models.Site)
@@ -33,6 +33,20 @@ def SiteManager_clear_cache(self):
     """Clears the ``Site`` object cache."""
     models = sys.modules.get(self.__class__.__module__)
     models.SITE_CACHE.clear()
+
+
+# Override SiteManager._get_site_by_id
+def SiteManager_get_site_by_id(self, site_id):
+    """
+    Patch _get_site_by_id to retrieve the site from the cache at the
+    beginning of the method to avoid a race condition.
+    """
+    models = sys.modules.get(self.__class__.__module__)
+    site = models.SITE_CACHE.get(site_id)
+    if site is None:
+        site = self.get(pk=site_id)
+        models.SITE_CACHE[site_id] = site
+    return site
 
 
 class SiteCache(object):
@@ -49,27 +63,11 @@ class SiteCache(object):
                 settings.CACHES[cache_alias].get('KEY_PREFIX', '')
             )
             cache = caches[cache_alias]
-            self._warn_cache_backend(cache, cache_alias)
         else:
             self._key_prefix = getattr(
                 settings, 'CACHE_MULTISITE_KEY_PREFIX', cache.key_prefix
             )
         self._cache = cache
-
-    def _warn_cache_backend(self, cache, cache_alias):
-        from django.core.cache.backends.dummy import DummyCache
-        from django.core.cache.backends.db import DatabaseCache
-        from django.core.cache.backends.filebased import FileBasedCache
-        from django.core.cache.backends.locmem import LocMemCache
-
-        if isinstance(cache, (LocMemCache, FileBasedCache)):
-            warn(("'%s' cache is %s, which may cause stale caches." %
-                  (cache_alias, type(cache).__name__)),
-                 RuntimeWarning, stacklevel=3)
-        elif isinstance(cache, (DatabaseCache, DummyCache)):
-            warn(("'%s' is %s, causing extra database queries." %
-                  (cache_alias, type(cache).__name__)),
-                 RuntimeWarning, stacklevel=3)
 
     def _get_cache_key(self, key):
         return 'sites.%s.%s' % (self.key_prefix, key)

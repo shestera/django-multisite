@@ -154,10 +154,3 @@ class SiteDomain(SiteID):
             qset = Site.objects.only('id')
             self.default = qset.get(domain=self.default_domain).id
         return self.default
-
-
-def SiteIDHook():
-    """Deprecated: Use multisite.SiteID(default=1) for identical behaviour."""
-    warn('Use multisite.SiteID instead of multisite.threadlocals.SiteIDHook',
-         DeprecationWarning, stacklevel=2)
-    return SiteID(default=1)
