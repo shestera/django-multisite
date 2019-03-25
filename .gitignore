@@ -1,10 +1,16 @@
 *.pyc
 *.pyo
+.cache/
+.eggs/
 .installed.cfg
 bin
 develop-eggs
+django_multisite.egg-info/
 dist
 downloads
 eggs
 parts
+MANIFEST
 multisite/*.egg-info
+.tox/
+.pytest_cache/

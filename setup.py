@@ -1,43 +1,60 @@
-from distutils.core import setup
 import os
+import sys
 
-# Compile the list of packages available, because distutils doesn't have
-# an easy way to do this.
-packages, data_files = [], []
-root_dir = os.path.dirname(__file__)
-if root_dir:
-    os.chdir(root_dir)
+from setuptools import find_packages, setup
 
-for dirpath, dirnames, filenames in os.walk('multisite'):
-    # Ignore dirnames that start with '.'
-    for i, dirname in enumerate(dirnames):
-        if dirname.startswith('.'): del dirnames[i]
-    if '__init__.py' in filenames:
-        pkg = dirpath.replace(os.path.sep, '.')
-        if os.path.altsep:
-            pkg = pkg.replace(os.path.altsep, '.')
-        packages.append(pkg)
-    elif filenames:
-        prefix = dirpath[10:] # Strip "multisite/" or "multisite\"
-        for f in filenames:
-            data_files.append(os.path.join(prefix, f))
+_dir_ = os.path.dirname(__file__)
 
+
+if sys.version_info < (3, 4):
+    install_requires = ['Django>=1.8,<2.0', 'tldextract>=1.2']
+else:
+    install_requires = ['Django>=1.8,<=2.2', 'tldextract>=1.2']
+
+
+def long_description():
+    """Returns the value of README.rst"""
+    with open(os.path.join(_dir_, 'README.rst')) as f:
+        return f.read()
+
+here = os.path.abspath(_dir_)
+version = {}
+with open(os.path.join(here, 'multisite', '__version__.py')) as f:
+    exec(f.read(), version)
+
+
+files = ["multisite/test_templates/*"]
 
 setup(name='django-multisite',
-      version='0.1',
-      description='Multisite for Django',
+      version=version['__version__'],
+      description='Serve multiple sites from a single Django application',
+      long_description=long_description(),
       author='Leonid S Shestera',
       author_email='leonid@shestera.ru',
-      url='http://github.com/shestera/django-multisite',
-      package_dir={'multisite': 'multisite'},
-      packages=packages,
-      package_data={'multisite': data_files},
+      maintainer='Ecometrica',
+      maintainer_email='dev@ecometrica.com',
+      url='http://github.com/ecometrica/django-multisite',
+      packages=find_packages(),
+      include_package_data=True,
+      package_data={'multisite': files},
+      install_requires=install_requires,
+      setup_requires=['pytest-runner'],
+      tests_require=['coverage', 'mock', 'pytest', 'pytest-cov',
+                     'pytest-django', 'pytest-pythonpath', 'tox'],
+      test_suite="multisite.tests",
       classifiers=['Development Status :: 4 - Beta',
                    'Environment :: Web Environment',
+                   'Framework :: Django',
                    'Intended Audience :: Developers',
                    'License :: OSI Approved :: BSD License',
                    'Operating System :: OS Independent',
                    'Programming Language :: Python',
+                   'Programming Language :: Python :: 2.7',
+                   'Programming Language :: Python :: 3.4',
+                   'Programming Language :: Python :: 3.5',
+                   'Programming Language :: Python :: 3.6',
+                   'Topic :: Internet',
+                   'Topic :: Internet :: WWW/HTTP',
+                   'Topic :: Software Development :: Libraries',
                    'Topic :: Utilities'],
       )
-
