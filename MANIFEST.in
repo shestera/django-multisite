@@ -1,0 +1,3 @@
+include INSTALL.txt
+include README.rst
+graft multisite
