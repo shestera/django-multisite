@@ -4,7 +4,26 @@ from __future__ import absolute_import
 import sys
 
 from django.conf import settings
+from django.db import ProgrammingError
 from django.db.models.signals import post_save, post_delete
+
+
+class DummySite(object):
+    """
+    Create a dummy site object in the scenario the Sites table isn't
+    available, like an initial migration
+    """
+    id = None
+    domain = 'example.com'
+    name = 'example.com'
+
+    def __init__(self, site_id, domain=None, name=None):
+        """ Setup what's needed for a simple site object """
+        self.id = site_id
+        if domain:
+            self.domain = domain
+        if name:
+            self.name = name
 
 
 def use_framework_for_site_cache():
@@ -44,7 +63,11 @@ def SiteManager_get_site_by_id(self, site_id):
     models = sys.modules.get(self.__class__.__module__)
     site = models.SITE_CACHE.get(site_id)
     if site is None:
-        site = self.get(pk=site_id)
+        try:
+            site = self.get(pk=site_id)
+        except ProgrammingError:
+            # Happens during an empty database (initial) migration
+            site = DummySite(site_id)
         models.SITE_CACHE[site_id] = site
     return site
 
