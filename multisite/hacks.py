@@ -19,11 +19,24 @@ class DummySite(object):
 
     def __init__(self, site_id, domain=None, name=None):
         """ Setup what's needed for a simple site object """
-        self.id = site_id
+        if isinstance(site_id, object):
+            # Likely a SiteID object
+            self.id = int(site_id)
+        else:
+            self.id = site_id
         if domain:
             self.domain = domain
         if name:
             self.name = name
+
+    def __repr__(self):
+        return repr(self.__int__())
+
+    def __str__(self):
+        return str(self.__int__())
+
+    def __int__(self):
+        return int(self.id)
 
 
 def use_framework_for_site_cache():
