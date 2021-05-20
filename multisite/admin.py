@@ -1,6 +1,3 @@
-from __future__ import unicode_literals
-from __future__ import absolute_import
-
 from django.contrib import admin
 from django.contrib.admin.views.main import ChangeList
 from django.contrib.sites.models import Site
@@ -19,6 +16,7 @@ class AliasAdmin(admin.ModelAdmin):
     readonly_fields = ('is_canonical',)
     search_fields = ('domain',)
 
+
 admin.site.register(Alias, AliasAdmin)
 
 
@@ -35,6 +33,7 @@ class AliasInline(admin.TabularInline):
         if ordering:
             qs = qs.order_by(*ordering)
         return qs
+
 
 # HACK: Monkeypatch AliasInline into SiteAdmin
 SiteAdmin.inlines = type(SiteAdmin.inlines)([AliasInline]) + SiteAdmin.inlines

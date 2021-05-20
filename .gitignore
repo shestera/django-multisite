@@ -3,6 +3,7 @@
 .cache/
 .eggs/
 .installed.cfg
+.idea
 bin
 develop-eggs
 django_multisite.egg-info/

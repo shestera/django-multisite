@@ -1,47 +1,29 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-from __future__ import absolute_import
-
 import os
 import tempfile
-try:
-    from urlparse import urlsplit, urlunsplit
-except ImportError:
-    from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit, urlunsplit
 
 import django
 from django.conf import settings
 from django.contrib.sites.models import Site, SITE_CACHE
 from django.core.exceptions import DisallowedHost
 from django.core import mail
-
 from django.core.cache import caches
-
-try:
-    # Django > 1.10 uses MiddlewareMixin
-    from django.utils.deprecation import MiddlewareMixin
-except ImportError:
-    MiddlewareMixin = object
-
 from django.core.exceptions import ImproperlyConfigured
-
-try:
-    from django.urls import get_callable
-except ImportError:
-    # Django < 1.10 compatibility
-    from django.core.urlresolvers import get_callable
-
+from django.urls import get_callable
 from django.db.models.signals import pre_save, post_delete, post_init
 from django.http import Http404, HttpResponsePermanentRedirect
 
 from hashlib import md5 as md5_constructor
 
+from django.utils.deprecation import MiddlewareMixin
+
 from .models import Alias
 
 
 class DynamicSiteMiddleware(MiddlewareMixin):
-    def __init__(self, *args, **kwargs):
-        super(DynamicSiteMiddleware, self).__init__(*args, **kwargs)
+    def __init__(self, get_response=None):
+        super().__init__(get_response)
         if not hasattr(settings.SITE_ID, 'set'):
             raise TypeError('Invalid type for settings.SITE_ID: %s' %
                             type(settings.SITE_ID).__name__)
@@ -222,8 +204,8 @@ class DynamicSiteMiddleware(MiddlewareMixin):
 
 
 class CookieDomainMiddleware(MiddlewareMixin):
-    def __init__(self, *args, **kwargs):
-        super(CookieDomainMiddleware, self).__init__(*args, **kwargs)
+    def __init__(self, get_response=None):
+        super().__init__(get_response)
         self.depth = int(getattr(settings, 'MULTISITE_COOKIE_DOMAIN_DEPTH', 0))
         if self.depth < 0:
             raise ValueError(

@@ -1,6 +1,3 @@
-from __future__ import unicode_literals
-from __future__ import absolute_import
-
 from django.utils.functional import empty, SimpleLazyObject
 
 
@@ -40,5 +37,6 @@ class AllowedHosts(object):
 
         for host in self.alias_model.objects.values_list('domain'):
             yield host[0]
+
 
 ALLOWED_HOSTS = IterableLazyObject(lambda: AllowedHosts())
