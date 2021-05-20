@@ -1,17 +1,7 @@
 # -*- coding: utf-8 -*
-from __future__ import unicode_literals
-from __future__ import absolute_import
-
 import sys
-
-from django.utils import six
 from contextlib import contextmanager
-from warnings import warn
-
-try:
-    from threading import local
-except ImportError:
-    from django.utils._threading_local import local
+from threading import local
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -46,7 +36,7 @@ class SiteID(local):
         ``default``, if specified, determines the default SITE_ID,
         if that is unset.
         """
-        if default is not None and not isinstance(default, six.integer_types):
+        if default is not None and not isinstance(default, int):
             raise ValueError("%r is not a valid default." % default)
         self.default = default
         self.reset()
@@ -63,21 +53,21 @@ class SiteID(local):
         return self.site_id
 
     def __lt__(self, other):
-        if isinstance(other, six.integer_types):
+        if isinstance(other, int):
             return self.__int__() < other
         elif isinstance(other, SiteID):
             return self.__int__() < other.__int__()
         return True
 
     def __le__(self, other):
-        if isinstance(other, six.integer_types):
+        if isinstance(other, int):
             return self.__int__() <= other
         elif isinstance(other, SiteID):
             return self.__int__() <= other.__int__()
         return True
 
     def __eq__(self, other):
-        if isinstance(other, six.integer_types):
+        if isinstance(other, int):
             return self.__int__() == other
         elif isinstance(other, SiteID):
             return self.__int__() == other.__int__()
@@ -137,7 +127,7 @@ class SiteDomain(SiteID):
         # http://python-future.org/compatible_idioms.html#basestring and
         # https://github.com/PythonCharmers/python-future/blob/master/src/past/types/basestring.py
         # are not super informative, so just fall back on a literal version check:
-        if not isinstance(default, basestring if sys.version_info.major == 2 else str):
+        if not isinstance(default, str):
             raise TypeError("%r is not a valid default domain." % default)
         self.default_domain = default
         self.default = None

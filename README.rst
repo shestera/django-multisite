@@ -35,6 +35,12 @@ Replace your SITE_ID in settings.py to::
     from multisite import SiteID
     SITE_ID = SiteID(default=1)
 
+Beginning with django 3.2 the sites framework performs a check to ensure that :code:`SITE_ID` is an integer.
+Add the following to the top of settings.py to use our check to allow integer or :code:`SiteID`::
+
+    from multisite import checks
+
+
 Add these to your INSTALLED_APPS::
 
     INSTALLED_APPS = [

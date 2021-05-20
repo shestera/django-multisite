@@ -1,21 +1,20 @@
 import os
-import sys
 
 from setuptools import find_packages, setup
 
 _dir_ = os.path.dirname(__file__)
 
-
-if sys.version_info < (3, 4):
-    install_requires = ['Django>=1.8,<2.0', 'tldextract>=1.2']
-else:
-    install_requires = ['Django>=1.8,<2.3', 'tldextract>=1.2']
+install_requires = [
+    'Django>=2.2,<4.0',
+    'tldextract>=1.2,<3'
+]
 
 
 def long_description():
     """Returns the value of README.rst"""
     with open(os.path.join(_dir_, 'README.rst')) as f:
         return f.read()
+
 
 here = os.path.abspath(_dir_)
 version = {}
@@ -49,10 +48,10 @@ setup(name='django-multisite',
                    'License :: OSI Approved :: BSD License',
                    'Operating System :: OS Independent',
                    'Programming Language :: Python',
-                   'Programming Language :: Python :: 2.7',
-                   'Programming Language :: Python :: 3.4',
-                   'Programming Language :: Python :: 3.5',
                    'Programming Language :: Python :: 3.6',
+                   'Programming Language :: Python :: 3.7',
+                   'Programming Language :: Python :: 3.8',
+                   'Programming Language :: Python :: 3.9',
                    'Topic :: Internet',
                    'Topic :: Internet :: WWW/HTTP',
                    'Topic :: Software Development :: Libraries',

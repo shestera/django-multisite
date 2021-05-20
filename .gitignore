@@ -3,6 +3,7 @@
 .cache/
 .eggs/
 .installed.cfg
+.idea
 bin
 develop-eggs
 django_multisite.egg-info/
@@ -15,3 +16,5 @@ multisite/*.egg-info
 .coverage
 .tox/
 .pytest_cache/
+.env
+build

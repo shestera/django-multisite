@@ -9,26 +9,18 @@ from the parent directory.
 
 This file uses relative imports and so cannot be run standalone.
 """
-
-from __future__ import unicode_literals
-from __future__ import absolute_import
-
 import django
 import logging
 import os
 import pytest
 import sys
 import tempfile
-import warnings
-from unittest import skipUnless
+from io import StringIO
+from unittest import mock, skipUnless
 
-try:
-    from unittest import mock
-except ImportError:
-    import mock
+from django.urls import re_path
 
 from django.conf import settings
-from django.conf.urls import url
 from django.contrib.sites.models import Site
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.management import call_command
@@ -36,9 +28,8 @@ from django.http import Http404, HttpResponse
 from django.template.loader import get_template
 from django.test import TestCase, override_settings
 from django.test.client import RequestFactory as DjangoRequestFactory
-from django.utils.six import StringIO
 
-from multisite import SiteDomain, SiteID, threadlocals
+from multisite import SiteDomain, SiteID
 
 from .hacks import use_framework_for_site_cache
 from .hosts import ALLOWED_HOSTS, AllowedHosts, IterableLazyObject
@@ -79,7 +70,7 @@ class TestContribSite(TestCase):
 # So create one:
 # (This is only used by test_integration)
 urlpatterns = [
-    url(r'^domain/$', lambda request, *args, **kwargs: HttpResponse(str(Site.objects.get_current())))
+    re_path(r'^domain/$', lambda request, *args, **kwargs: HttpResponse(str(Site.objects.get_current())))
 ]
 
 @pytest.mark.django_db
